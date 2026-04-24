@@ -1,10 +1,12 @@
 package entity;
 
+import main.GamePanel;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java .awt.Rectangle ;
 public class Entity {
-
+    GamePanel gp;
     public int worldX, worldY;
     public int speed;
 
