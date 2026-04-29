@@ -22,4 +22,6 @@ public class SuperObject {
             g2.drawImage(image, screenX, screenY, gp.TILE_SIZE, gp.TILE_SIZE, null);
         }
     }
+    public int solidAreaDefaultX = 0;
+    public int solidAreaDefaultY = 0;
 }

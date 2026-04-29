@@ -12,6 +12,7 @@ public class Player extends Entity{
 
     GamePanel gp;
     KeyHandler keyH;
+    int hasKey = 0;
 
     public final int screenX;
     public final int screenY;
@@ -28,6 +29,8 @@ public class Player extends Entity{
         SolidArea.y=16 ;
         SolidArea.height=32;
         SolidArea.width=32 ;
+        solidAreaDefaultX = SolidArea.x;
+        solidAreaDefaultY = SolidArea.y;
 
         setDefaultvalues();
         getPlayerImage();
@@ -74,7 +77,9 @@ public class Player extends Entity{
 
             }
              CollisionOn=false ;
-            gp.cChecker.CheckTile(this) ;
+            gp.cChecker.checkTile(this) ;
+            int objIndex = gp.cChecker.checkObject(this, true);
+            pickUpObject(objIndex);
             //If collision is false//
             if(CollisionOn==false){
                 switch(direction){
@@ -149,5 +154,31 @@ public class Player extends Entity{
         }
         g2.drawImage(image, screenX, screenY, gp.TILE_SIZE, gp.TILE_SIZE, null);
 
+    }
+    public void pickUpObject(int i) {
+        if (i != 999) {
+            String objectName = gp.obj[i].name;
+
+            switch (objectName) {
+                case "Key":
+                    gp.obj[i] = null;
+                    hasKey++;
+                    System.out.println("Key picked up! Keys: " + hasKey);
+                    break;
+                case "Door":
+                    if (hasKey > 0) {
+                        gp.obj[i] = null;
+                        hasKey--;
+                        System.out.println("Door opened! Keys left: " + hasKey);
+                    } else {
+                        System.out.println("You need a key!");
+                    }
+                    break;
+                case "Chest":
+                    gp.obj[i] = null;
+                    System.out.println("You found treasure!");
+                    break;
+            }
+        }
     }
 }
