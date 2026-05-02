@@ -23,22 +23,18 @@ public class GamePanel extends JPanel implements Runnable{
     //WORLD SETTINGS
     public final int MAX_WORLD_COL = 50;
     public final int MAX_WORLD_ROW = 50;
-    public final int WORLD_WIDTH = TILE_SIZE * MAX_WORLD_COL;
-    public final int WORLD_HEIGHT = TILE_SIZE * MAX_SCREEN_ROW;
 
     //FPS
     int FPS = 60;
 
     TileManager tileM = new TileManager(this);
     KeyHandler keyH = new KeyHandler();
-    public  CollisionChecker cChecker= new CollisionChecker(this);
+    public CollisionChecker cChecker= new CollisionChecker(this) ;
+    public AssetSetter assetSetter = new AssetSetter(this);
     public UI ui = new UI(this);
-    Thread gameThread;
-
-    // ENTITY AND OBJECT
     public Player player = new Player(this,keyH);
     public SuperObject[] obj = new SuperObject[10];
-
+    Thread gameThread;
 
     Sound sound = new Sound() ;
     public GamePanel(){
@@ -48,28 +44,11 @@ public class GamePanel extends JPanel implements Runnable{
         this.setDoubleBuffered(true);
         this.addKeyListener(keyH);
         this.setFocusable(true);
-        setupObjects();
     }
-    public void setupGame(){
+    public void setupGame() {
 
         playMusic(0) ;
-    }
-    public void setupObjects() {
-        obj[0] = new object.OBJ_Key();
-        obj[0].worldX = 23 * TILE_SIZE;
-        obj[0].worldY = 7 * TILE_SIZE;
-
-        obj[1] = new object.OBJ_Key();
-        obj[1].worldX = 23 * TILE_SIZE;
-        obj[1].worldY = 40 * TILE_SIZE;
-
-        obj[2] = new object.OBJ_Door();
-        obj[2].worldX = 10 * TILE_SIZE;
-        obj[2].worldY = 11 * TILE_SIZE;
-
-        obj[3] = new object.OBJ_Chest();
-        obj[3].worldX = 10 * TILE_SIZE;
-        obj[3].worldY = 7 * TILE_SIZE;
+        assetSetter.setObject();
     }
     public void startGameThread(){
 
@@ -111,26 +90,26 @@ public class GamePanel extends JPanel implements Runnable{
     }
 
     public void paintComponent(Graphics g){
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g;
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g;
 
-            // TILE
-            tileM.draw(g2);
+        //TILE
+        tileM.draw(g2);
 
-            // OBJECT
-            for (int i = 0; i < obj.length; i++) {
-                if (obj[i] != null) {
-                    obj[i].draw(g2, this);
-                }
+        //OBJECT
+        for (SuperObject superObject : obj) {
+            if (superObject != null) {
+                superObject.draw(g2, this);
             }
+        }
 
-            // PLAYER
-            player.draw(g2);
+        //PLAYER
+        player.draw(g2);
 
-            // UI
-            ui.draw(g2);
+        // UI
+        ui.draw(g2);
 
-            g2.dispose();
+        g2.dispose();
 
     }
 public void playMusic (int i){

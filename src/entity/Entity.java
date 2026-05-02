@@ -2,7 +2,6 @@ package entity;
 
 import main.GamePanel;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java .awt.Rectangle ;
 public class Entity {
@@ -16,7 +15,7 @@ public class Entity {
     public int spriteCounter = 0;
     public int spriteNum = 1;
     public Rectangle SolidArea;
-    public boolean CollisionOn= false;
+    public boolean collisionOn = false;
     public int solidAreaDefaultX;
     public int solidAreaDefaultY;
 }
