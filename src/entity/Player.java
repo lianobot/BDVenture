@@ -12,7 +12,7 @@ public class Player extends Entity{
 
     GamePanel gp;
     KeyHandler keyH;
-    int hasKey = 0;
+    public int hasKey = 0;
 
     public final int screenX;
     public final int screenY;
@@ -81,7 +81,7 @@ public class Player extends Entity{
             int objIndex = gp.cChecker.checkObject(this, true);
             pickUpObject(objIndex);
             //If collision is false//
-            if(CollisionOn==false){
+            if(!CollisionOn){
                 switch(direction){
                     case"up":
                         worldY -= speed;
@@ -164,21 +164,21 @@ public class Player extends Entity{
                     gp.obj[i] = null;
                     gp.playSE(1);
                     hasKey++;
-                    System.out.println("Key picked up! Keys: " + hasKey);
+                    gp.ui.showMessage("You got a Key!");
                     break;
                 case "Door":
                     if (hasKey > 0) {
                         gp.obj[i] = null;
                         gp.playSE(3);
                         hasKey--;
-                        System.out.println("Door opened! Keys left: " + hasKey);
+                        gp.ui.showMessage("Door opened! Keys left: " + hasKey);
                     } else {
-                        System.out.println("You need a key!");
+                        gp.ui.showMessage("You need a Key!");
                     }
                     break;
                 case "Chest":
                     gp.obj[i] = null;
-                    System.out.println("You found treasure!");
+                    gp.ui.showMessage("You found treasure!");
                     break;
             }
         }
