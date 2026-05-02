@@ -31,10 +31,15 @@ public class GamePanel extends JPanel implements Runnable{
 
     TileManager tileM = new TileManager(this);
     KeyHandler keyH = new KeyHandler();
+    public  CollisionChecker cChecker= new CollisionChecker(this);
+    public UI ui = new UI(this);
     Thread gameThread;
-  public  CollisionChecker cChecker= new CollisionChecker(this) ;
+
+    // ENTITY AND OBJECT
     public Player player = new Player(this,keyH);
     public SuperObject[] obj = new SuperObject[10];
+
+
     public GamePanel(){
 
         this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -101,20 +106,25 @@ public class GamePanel extends JPanel implements Runnable{
     }
 
     public void paintComponent(Graphics g){
-
-
             super.paintComponent(g);
             Graphics2D g2 = (Graphics2D) g;
 
+            // TILE
             tileM.draw(g2);
 
+            // OBJECT
             for (int i = 0; i < obj.length; i++) {
                 if (obj[i] != null) {
                     obj[i].draw(g2, this);
                 }
             }
 
+            // PLAYER
             player.draw(g2);
+
+            // UI
+            ui.draw(g2);
+
             g2.dispose();
 
     }
