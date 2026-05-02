@@ -27,16 +27,24 @@ public class GamePanel extends JPanel implements Runnable{
     //FPS
     int FPS = 60;
 
+    //SYSTEM
     TileManager tileM = new TileManager(this);
-    KeyHandler keyH = new KeyHandler();
+    KeyHandler keyH = new KeyHandler(this);
+    Sound sound = new Sound() ;
     public CollisionChecker cChecker= new CollisionChecker(this) ;
     public AssetSetter assetSetter = new AssetSetter(this);
     public UI ui = new UI(this);
-    public Player player = new Player(this,keyH);
-    public SuperObject[] obj = new SuperObject[10];
     Thread gameThread;
 
-    Sound sound = new Sound() ;
+    //ENTITY AND OBJECT
+    public Player player = new Player(this,keyH);
+    public SuperObject[] obj = new SuperObject[10];
+
+    //GAME STATE
+    public int gameState;
+    public final int playState = 1;
+    public final int pauseState = 2;
+
     public GamePanel(){
 
         this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -49,6 +57,7 @@ public class GamePanel extends JPanel implements Runnable{
 
         playMusic(0) ;
         assetSetter.setObject();
+        gameState = playState;
     }
     public void startGameThread(){
 
@@ -86,12 +95,23 @@ public class GamePanel extends JPanel implements Runnable{
     }
     public void update(){
 
-        player.update();
+        if (gameState == playState) {
+            player.update();
+        }
+        if (gameState == pauseState){
+            //nothing atm
+        }
     }
 
     public void paintComponent(Graphics g){
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
+
+        //DEBUG
+        long drawStart = 0;
+        if (keyH.checkDrawTime) {
+            drawStart = System.nanoTime();
+        }
 
         //TILE
         tileM.draw(g2);
@@ -106,8 +126,16 @@ public class GamePanel extends JPanel implements Runnable{
         //PLAYER
         player.draw(g2);
 
-        // UI
+        //UI
         ui.draw(g2);
+
+        //DEBUG
+        if (keyH.checkDrawTime) {
+            long drawEnd = System.nanoTime();
+            long passed = drawEnd - drawStart;
+            g2.setColor(Color.white);
+            g2.drawString("Draw Time: " + passed, 10, 400);
+        }
 
         g2.dispose();
 

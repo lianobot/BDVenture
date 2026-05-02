@@ -15,7 +15,6 @@ public class Player extends Entity{
     KeyHandler keyH;
     public final int screenX;
     public final int screenY;
-    public int hasKey = 0;
     int standCounter = 0;
 
 
@@ -125,30 +124,7 @@ public class Player extends Entity{
 
     public void pickUpObject(int i) {
         if (i != 999) {
-            String objectName = gp.obj[i].name;
 
-            switch (objectName) {
-                case "Key":
-                    gp.obj[i] = null;
-                    gp.playSE(1);
-                    hasKey++;
-                    gp.ui.showMessage("You got a Key!");
-                    break;
-                case "Door":
-                    if (hasKey > 0) {
-                        gp.obj[i] = null;
-                        gp.playSE(3);
-                        hasKey--;
-                        gp.ui.showMessage("Door opened! Keys left: " + hasKey);
-                    } else {
-                        gp.ui.showMessage("You need a Key!");
-                    }
-                    break;
-                case "Chest":
-                    gp.obj[i] = null;
-                    gp.ui.showMessage("You found treasure!");
-                    break;
-            }
         }
     }
 
@@ -192,8 +168,8 @@ public class Player extends Entity{
         }
         g2.drawImage(image, screenX, screenY, gp.TILE_SIZE, gp.TILE_SIZE, null);
 
-        //SHOWS COLLISION BOX FOR TESTING
-        //g2.setColor(Color.red);
-        //g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, SolidArea.width, SolidArea.height);
+//        SHOWS COLLISION BOX FOR TESTING
+//        g2.setColor(Color.red);
+//        g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, SolidArea.width, SolidArea.height);
         }
     }
