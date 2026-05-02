@@ -31,10 +31,15 @@ public class GamePanel extends JPanel implements Runnable{
 
     TileManager tileM = new TileManager(this);
     KeyHandler keyH = new KeyHandler();
-    Thread gameThread;
+    Sound sound = new Sound() ;
+
+
   public  CollisionChecker cChecker= new CollisionChecker(this) ;
+
+    Thread gameThread;
     public Player player = new Player(this,keyH);
     public SuperObject[] obj = new SuperObject[10];
+
     public GamePanel(){
 
         this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -43,6 +48,10 @@ public class GamePanel extends JPanel implements Runnable{
         this.addKeyListener(keyH);
         this.setFocusable(true);
         setupObjects();
+    }
+    public void setupGame(){
+
+        playMusic(0) ;
     }
     public void setupObjects() {
         obj[0] = new object.OBJ_Key();
@@ -118,5 +127,17 @@ public class GamePanel extends JPanel implements Runnable{
             g2.dispose();
 
     }
+public void playMusic (int i){
+        sound .setFile( i) ;
+        sound.play() ;
+        sound .loop() ;
 
+}
+public void stopMusic(){
+        sound.stop();
+}
+public void playSE(int i){
+        sound.setFile(i);
+        sound.play();
+}
 }
