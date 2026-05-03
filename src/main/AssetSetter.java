@@ -16,7 +16,7 @@ public class AssetSetter {
 
     public void setNPC(){
         gp.npc[0] = new Npc_WiseMan(gp);
-        gp.npc[0].worldX = gp.TILE_SIZE*21;
-        gp.npc[0].worldY = gp.TILE_SIZE*21;
+        gp.npc[0].worldX = gp.TILE_SIZE*44;
+        gp.npc[0].worldY = gp.TILE_SIZE*74;
     }
 }
