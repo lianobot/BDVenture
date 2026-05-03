@@ -1,9 +1,6 @@
 package main;
 
-import object.OBJ_Key;
-
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
 
 public class UI {
@@ -41,7 +38,7 @@ public class UI {
         g2.setColor(Color.white);
 
         if (gp.gameState == gp.playState){
-            // Make playstate stuff later
+            // Make play state stuff later
         }
         if (gp.gameState == gp.pauseState){
             drawPauseScreen();
@@ -60,8 +57,7 @@ public class UI {
 
     public int getXForCenteredText(String text){
         int length = (int) g2.getFontMetrics().getStringBounds(text, g2).getWidth();
-        int x = gp.SCREEN_WIDTH/2 - length/2;
-        return x;
+        return gp.SCREEN_WIDTH/2 - length/2;
 
     }
 }

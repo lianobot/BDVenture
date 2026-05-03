@@ -11,7 +11,6 @@ import java.util.Objects;
 
 public class Player extends Entity{
 
-    GamePanel gp;
     KeyHandler keyH;
     public final int screenX;
     public final int screenY;
@@ -20,22 +19,22 @@ public class Player extends Entity{
 
 
     public Player(GamePanel gp, KeyHandler keyH){
-        this.gp = gp;
+        super(gp);
         this.keyH = keyH;
 
         screenX = gp.SCREEN_WIDTH/2 - (gp.TILE_SIZE/2);
         screenY = gp.SCREEN_HEIGHT/2 - (gp.TILE_SIZE/2);
 
-        SolidArea = new Rectangle() ;
-        SolidArea.x=8 ;
-        SolidArea.y=16 ;
-        SolidArea.height=32;
-        SolidArea.width=32 ;
-        solidAreaDefaultX = SolidArea.x;
-        solidAreaDefaultY = SolidArea.y;
+        solidArea = new Rectangle() ;
+        solidArea.x=8 ;
+        solidArea.y=16 ;
+        solidArea.height=32;
+        solidArea.width=32 ;
+        solidAreaDefaultX = solidArea.x;
+        solidAreaDefaultY = solidArea.y;
 
         setDefaultValues();
-        getPlayerImage();
+        getImage();
     }
     public void setDefaultValues(){
 
@@ -45,7 +44,7 @@ public class Player extends Entity{
         direction = "down";
     }
 
-    public void getPlayerImage(){
+    public void getImage(){
         try {
 
             up1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/player/boy_up_1.png")));
@@ -78,11 +77,19 @@ public class Player extends Entity{
                 direction = "right";
 
             }
-             collisionOn =false ;
+            //CHECK TILE COLLISION
+            collisionOn =false ;
             gp.cChecker.checkTile(this) ;
+
+            //CHECK NPC COLLISION
+            int npcIndex = gp.cChecker.checkEntity(this,gp.npc);
+            interactNPC(npcIndex);
+
+            //CHECK OBJECT COLLISION
             int objIndex = gp.cChecker.checkObject(this, true);
             pickUpObject(objIndex);
-            //If collision is false//
+
+            //IF COLLISION FALSE, PLAYER MAY MOVE
             if(!collisionOn){
                 switch(direction){
                     case"up":
@@ -124,10 +131,15 @@ public class Player extends Entity{
 
     public void pickUpObject(int i) {
         if (i != 999) {
-
+            //add objects
         }
     }
 
+    public void interactNPC(int i){
+        if (i != 999){
+            System.out.println("You are hitting an npc");
+        }
+    }
 
     public void draw(Graphics2D g2) {
         BufferedImage image = null;

@@ -1,6 +1,6 @@
 package main;
 
-import object.OBJ_Key;
+import entity.Npc_WiseMan;
 
 
 public class AssetSetter {
@@ -12,5 +12,11 @@ public class AssetSetter {
 
     public void setObject(){
 
+    }
+
+    public void setNPC(){
+        gp.npc[0] = new Npc_WiseMan(gp);
+        gp.npc[0].worldX = gp.TILE_SIZE*21;
+        gp.npc[0].worldY = gp.TILE_SIZE*21;
     }
 }
