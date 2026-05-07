@@ -10,6 +10,7 @@ public class UI {
     public Boolean messageON = false;
     public String message = "";
     public String currentDialogue;
+    public int commandNum = 0;
 //    int messageCounter = 0;
 //    public Boolean gameFinished = false;
 
@@ -36,6 +37,11 @@ public class UI {
 
         g2.setFont(arial_40);
         g2.setColor(Color.white);
+
+        //TitleState
+        if (gp.gameState == gp.titleState){
+            drawTitleScreen();
+        }
 
         //PlayState
         if (gp.gameState == gp.playState){
@@ -83,6 +89,57 @@ public class UI {
         g2.setColor(c);
         g2.setStroke(new BasicStroke(5));
         g2.drawRoundRect(x+5, y+5, width-10, height-10, 25, 25);
+    }
+
+    public void drawTitleScreen(){
+
+        g2.setColor(new Color(70,120,80));
+        g2.fillRect(0,0,gp.SCREEN_WIDTH,gp.SCREEN_HEIGHT);
+
+        //TITLE NAME
+        g2.setFont(g2.getFont().deriveFont(Font.BOLD, 96F));
+        String text = "The Game.";
+        int x = getXForCenteredText(text);
+        int y = gp.TILE_SIZE * 3;
+
+        //SHADOW
+        g2.setColor(Color.BLACK);
+        g2.drawString(text,x+5,y+5);
+        //MAIN COLOR
+        g2.setColor(Color.white);
+        g2.drawString(text, x, y);
+
+        //MC IMAGE
+        x = gp.SCREEN_WIDTH / 2 - (gp.TILE_SIZE*2);
+        y += (gp.TILE_SIZE * 2);
+        g2.drawImage(gp.player.idleDown[0],x,y, gp.TILE_SIZE*4, gp.TILE_SIZE*4, null);
+
+        //MENU
+        g2.setFont(g2.getFont().deriveFont(Font.BOLD, 48F));
+
+        text = "New Game";
+        x = getXForCenteredText(text);
+        y += gp.TILE_SIZE*6;
+        g2.drawString(text,x,y);
+        if(commandNum == 0){
+            g2.drawString(">",x-gp.TILE_SIZE,y);
+        }
+
+        text = "Load Game";
+        x = getXForCenteredText(text);
+        y += gp.TILE_SIZE;
+        g2.drawString(text,x,y);
+        if(commandNum == 1){
+            g2.drawString(">",x-gp.TILE_SIZE,y);
+        }
+
+        text = "Quit";
+        x = getXForCenteredText(text);
+        y += gp.TILE_SIZE;
+        g2.drawString(text,x,y);
+        if(commandNum == 2){
+            g2.drawString(">",x-gp.TILE_SIZE,y);
+        }
     }
 
     public void drawPauseScreen(){

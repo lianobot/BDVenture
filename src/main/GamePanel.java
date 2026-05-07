@@ -16,8 +16,8 @@ public class GamePanel extends JPanel implements Runnable{
 
     public final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE; // 48x48 tile
 
-    public final double MAX_SCREEN_COLUMN = 30;
-    public final double MAX_SCREEN_ROW = 16.875;
+    public final double MAX_SCREEN_COLUMN = 27;
+    public final double MAX_SCREEN_ROW = 15;
     public final int SCREEN_WIDTH = (int) (TILE_SIZE * MAX_SCREEN_COLUMN); // 1440 pixels
     public final int SCREEN_HEIGHT = (int) (TILE_SIZE * MAX_SCREEN_ROW); // 810 pixels
 
@@ -44,6 +44,7 @@ public class GamePanel extends JPanel implements Runnable{
 
     //GAME STATE
     public int gameState;
+    public final int titleState = 0;
     public final int playState = 1;
     public final int pauseState = 2;
     public final int dialogueState = 3;
@@ -58,10 +59,9 @@ public class GamePanel extends JPanel implements Runnable{
     }
     public void setupGame() {
 
-        playMusic(0) ;
         assetSetter.setObject();
         assetSetter.setNPC();
-        gameState = playState;
+        gameState = titleState;
     }
     public void startGameThread(){
 
@@ -125,28 +125,40 @@ public class GamePanel extends JPanel implements Runnable{
             drawStart = System.nanoTime();
         }
 
-        //TILE
-        tileM.draw(g2);
 
-        //OBJECT
-        for (SuperObject superObject : obj) {
-            if (superObject != null) {
-                superObject.draw(g2, this);
-            }
+        //TITLE SCREEN
+        if (gameState == titleState){
+
+            ui.draw(g2);
+
         }
+        //OTHERS
+        else {
 
-        //NPC
-        for (Entity entity : npc) {
-            if (entity != null) {
-                entity.draw(g2);
+            //TILE
+            tileM.draw(g2);
+
+            //OBJECT
+            for (SuperObject superObject : obj) {
+                if (superObject != null) {
+                    superObject.draw(g2, this);
+                }
             }
+
+            //NPC
+            for (Entity entity : npc) {
+                if (entity != null) {
+                    entity.draw(g2);
+                }
+            }
+
+            //PLAYER
+            player.draw(g2);
+
+            //UI
+            ui.draw(g2);
+
         }
-
-        //PLAYER
-        player.draw(g2);
-
-        //UI
-        ui.draw(g2);
 
         //DEBUG
         if (keyH.checkDrawTime) {
