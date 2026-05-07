@@ -1,12 +1,17 @@
 package main;
 
+import object.OBJ_Heart;
+import object.SuperObject;
+
 import java.awt.*;
+import java.awt.image.BufferedImage;
 
 public class UI {
 
     GamePanel gp;
     Graphics2D g2;
     Font arial_40, arial_80B;
+    BufferedImage heart_full, heart_half, heart_blank;
     public Boolean messageON = false;
     public String message = "";
     public String currentDialogue;
@@ -23,6 +28,12 @@ public class UI {
 
         arial_40 = new Font("Arial", Font.PLAIN, 40);
         arial_80B = new Font("Arial", Font.BOLD, 40);
+
+        //CREATE HUG OBJECT
+        SuperObject heart = new OBJ_Heart(gp);
+        heart_full = heart.image;
+        heart_half = heart.image2;
+        heart_blank = heart.image3;
     }
 
     public void showMessage(String text){
@@ -45,20 +56,52 @@ public class UI {
 
         //PlayState
         if (gp.gameState == gp.playState){
-            // Make play state stuff later
+            drawPlayerLife();
         }
 
         //PauseState
         if (gp.gameState == gp.pauseState){
+            drawPlayerLife();
             drawPauseScreen();
         }
 
         //DialogueState
         if (gp.gameState == gp.dialogueState){
+            drawPlayerLife();
             drawDialogueScreen();
         }
     }
 
+    public void drawPlayerLife(){
+
+        int x = gp.TILE_SIZE/2;
+        int y = gp.TILE_SIZE/2;
+        int i = 0;
+
+        //DRAW MAX LIFE
+        while (i < gp.player.maxLife/2){
+            g2.drawImage(heart_blank,x,y,gp.TILE_SIZE, gp.TILE_SIZE,null);
+            i++;
+            x += gp.TILE_SIZE;
+        }
+
+        //RESET
+        x = gp.TILE_SIZE/2;
+        y = gp.TILE_SIZE/2;
+        i = 0;
+
+        //DRAW CURRENT LIFE
+        while (i < gp.player.life){
+            g2.drawImage(heart_half,x,y,gp.TILE_SIZE, gp.TILE_SIZE, null);
+            i++;
+            if (i < gp.player.life){
+                g2.drawImage(heart_full,x,y,gp.TILE_SIZE, gp.TILE_SIZE,null);
+            }
+            i++;
+            x += gp.TILE_SIZE;
+        }
+
+    }
     public void drawDialogueScreen(){
 
         //WINDOW

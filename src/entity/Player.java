@@ -55,8 +55,13 @@ public class Player extends Entity{
 
         worldX = gp.TILE_SIZE * 78;
         worldY = gp.TILE_SIZE * 63;
+
         speed = 4;
         direction = "down";
+
+        //PLAYER STATUS
+        maxLife = 6;
+        life = maxLife;
     }
 
     public void getImage(){
@@ -119,6 +124,9 @@ public class Player extends Entity{
             // CHECK OBJECT COLLISION
             int objIndex = gp.cChecker.checkObject(this, true);
             pickUpObject(objIndex);
+
+            // CHECK EVENT
+            gp.eventHandler.checkEvent();
 
             // IF COLLISION FALSE, PLAYER MAY MOVE
             if (!collisionOn) {
