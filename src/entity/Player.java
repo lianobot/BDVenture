@@ -67,8 +67,8 @@ public class Player extends Entity{
 
             for (int i = 0; i < 6; i++) {
                 // IDLE ANIMATIONS
-                idleDown[i]  = spriteSheet.getSubimage(i * size, 0 * size, size, size);
-                idleRight[i] = spriteSheet.getSubimage(i * size, 1 * size, size, size);
+                idleDown[i]  = spriteSheet.getSubimage(i * size, 0, size, size);
+                idleRight[i] = spriteSheet.getSubimage(i * size, size, size, size);
                 idleLeft[i]  = flipImage(idleRight[i]);
                 idleUp[i]    = spriteSheet.getSubimage(i * size, 2 * size, size, size);
 
@@ -151,9 +151,14 @@ public class Player extends Entity{
     }
 
     public void interactNPC(int i){
-        if (i != 999){
-            System.out.println("You are hitting an npc");
+        if (i != 999) {
+
+            if (gp.keyH.ePressed) {
+                gp.gameState = gp.dialogueState;
+                gp.npc[i].speak();
+            }
         }
+        gp.keyH.ePressed = false;
     }
 
     public void draw(Graphics2D g2) {
