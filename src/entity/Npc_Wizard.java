@@ -27,11 +27,11 @@ public class Npc_Wizard extends Entity{
     }
 
     public void getImage(){
-        down = new BufferedImage[2];
+        idleDown = new BufferedImage[2];
         try {
 
-            down[0] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_1.png")));
-            down[1] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_2.png")));
+            idleDown[0] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_1.png")));
+            idleDown[1] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_2.png")));
 
         } catch (IOException e){
             e.printStackTrace();

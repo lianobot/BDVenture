@@ -13,10 +13,10 @@ public class OBJ_Door extends Entity {
         super(gp);
         name = "Door";
         collision = true;
-        down = new BufferedImage[1];
+        idleDown = new BufferedImage[1];
 
         try {
-            down[0] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/object/Door.png")));
+            idleDown[0] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/object/Door.png")));
             collision = true;
 
             solidArea.x = 0;

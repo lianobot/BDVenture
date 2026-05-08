@@ -15,13 +15,44 @@ public class MON_Slime extends Entity {
     public MON_Slime(GamePanel gp) {
         super(gp);
 
+        //MONSTER STATS
         name = "Slime";
         speed = 1;
         maxLife = 2;
         life = maxLife;
         type = 2;
         sizeScale = 2;
+        attackArea.width = 32;
+        attackArea.height = 32;
+        this.attack = 1;
 
+        //ANIMATIONS
+        idleUp = new BufferedImage[4];
+        idleDown = new BufferedImage[4];
+        idleLeft = new BufferedImage[4];
+        idleRight = new BufferedImage[4];
+
+        walkUp = new BufferedImage[6];
+        walkDown = new BufferedImage[6];
+        walkLeft = new BufferedImage[6];
+        walkRight = new BufferedImage[6];
+
+        attackUp = new BufferedImage[4];
+        attackDown = new BufferedImage[4];
+        attackLeft = new BufferedImage[4];
+        attackRight = new BufferedImage[4];
+
+        damageUp = new BufferedImage[3];
+        damageDown = new BufferedImage[3];
+        damageLeft = new BufferedImage[3];
+        damageRight = new BufferedImage[3];
+
+        dieUp = new BufferedImage[5];
+        dieDown = new BufferedImage[5];
+        dieLeft = new BufferedImage[5];
+        dieRight = new BufferedImage[5];
+
+        //HITBOX
         solidArea.x = 32;
         solidArea.y = 34;
         solidArea.width = 32;
@@ -38,21 +69,46 @@ public class MON_Slime extends Entity {
             BufferedImage spriteSheet = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/monster/slime.png")));
             int size = 32;
 
-            up = new BufferedImage[6];
-            down = new BufferedImage[6];
-            left = new BufferedImage[6];
-            right = new BufferedImage[6];
+            for (int i = 0; i < 8; i++) {
 
-            for (int i = 0; i < 6; i++) {
-
-                int x = (i % 4) * size;
-                int rowOffset = (i < 4) ? 0 : 1;
+                // IDLE ANIMATIONS
+                if (i < 4) {
+                    idleDown[i] = spriteSheet.getSubimage(i * size, 0, size, size);
+                    idleRight[i] = spriteSheet.getSubimage(i * size, size, size, size);
+                    idleLeft[i] = flipImage(idleRight[i]);
+                    idleUp[i] = spriteSheet.getSubimage(i * size, 2 * size, size, size);
+                }
 
                 // MOVE ANIMATIONS
-                down[i]  = spriteSheet.getSubimage(x, 3 + rowOffset, size, size);
-                right[i] = spriteSheet.getSubimage(x, 4 + rowOffset, size, size);
-                left[i]  = flipImage(right[i]);
-                up[i]    = spriteSheet.getSubimage(x, 5 + rowOffset, size, size);
+                if (i < 6) {
+                    walkDown[i] = spriteSheet.getSubimage(i * size, 3 * size, size, size);
+                    walkRight[i] = spriteSheet.getSubimage(i * size, 4 * size, size, size);
+                    walkLeft[i] = flipImage(walkRight[i]);
+                    walkUp[i] = spriteSheet.getSubimage(i * size, 5 * size, size, size);
+                }
+
+                // ATTACK ANIMATIONS
+                if (i < 4) {
+                    attackDown[i] = spriteSheet.getSubimage(i * size, 6 * size, size, size);
+                    attackRight[i] = spriteSheet.getSubimage(i * size, 7 * size, size, size);
+                    attackLeft[i] = flipImage(attackRight[i]);
+                    attackUp[i] = spriteSheet.getSubimage(i * size, 8 * size, size, size);
+                }
+
+                // DAMAGE ANIMATION
+                if (i < 3) {
+                    damageDown[i] = spriteSheet.getSubimage(i * size, 9 * size, size, size);
+                    damageRight[i] = spriteSheet.getSubimage(i * size, 10 * size, size, size);
+                    damageLeft[i] = flipImage(damageRight[i]);
+                    damageUp[i] = spriteSheet.getSubimage(i * size, 11 * size, size, size);
+                }
+
+                // DEATH ANIMATION
+                if (i < 5) {
+                    dieRight[i] = spriteSheet.getSubimage(i * size, 12 * size, size, size);
+                    dieLeft[i] = flipImage(dieRight[i]);
+                    dieUp = dieRight = dieDown;
+                }
             }
 
         } catch (IOException e) {
@@ -69,29 +125,46 @@ public class MON_Slime extends Entity {
         return flipped;
     }
 
-    public void setAction(){
+    @Override
+    public void setAction() {
 
-        actionLockCounter++;
+        // Calculate distance to player
+        int xDistance = Math.abs(worldX - gp.player.worldX);
+        int yDistance = Math.abs(worldY - gp.player.worldY);
+        int tileDistance = (xDistance + yDistance) / gp.TILE_SIZE;
 
-        if(actionLockCounter == 120){
-
-            Random random = new Random();
-            int i = random.nextInt(100)+1;
-
-            if(i <= 25){
-                direction = "up";
+        // 1. ATTACKING STATE
+        if (tileDistance < 2) {
+            actionLockCounter++;
+            if (actionLockCounter > 20) { // Slight delay before attack
+                attacking = true;
+                actionLockCounter = 0;
             }
-            if(i > 25 && i <= 50){
-                direction = "down";
-            }
-            if(i > 50 && i <= 75){
-                direction = "left";
-            }
-            if(i > 75){
-                direction = "right";
-            }
+        }
+        // 2. CHASING STATE
+        else if (tileDistance < 10) {
+            // Move towards player
+            if (worldX < gp.player.worldX) { direction = "right"; }
+            else if (worldX > gp.player.worldX) { direction = "left"; }
 
-            actionLockCounter = 0;
+            // Vertical check
+            if (yDistance > xDistance) {
+                if (worldY < gp.player.worldY) { direction = "down"; }
+                else if (worldY > gp.player.worldY) { direction = "up"; }
+            }
+        }
+        // 3. WANDERING STATE
+        else {
+            actionLockCounter++;
+            if (actionLockCounter == 120) {
+                Random random = new Random();
+                int i = random.nextInt(100) + 1;
+                if (i <= 25) { direction = "up"; }
+                else if (i <= 50) { direction = "down"; }
+                else if (i <= 75) { direction = "left"; }
+                else { direction = "right"; }
+                actionLockCounter = 0;
+            }
         }
     }
 }

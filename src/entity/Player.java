@@ -15,6 +15,10 @@ public class Player extends Entity{
     public final int screenX;
     public final int screenY;
 
+    // Player Stats
+    public int attack = 1;
+    public int defense = 0;
+
     // Player State tracker
     public boolean isIdle = true;
 
@@ -44,7 +48,7 @@ public class Player extends Entity{
 
         //Collision Box
         solidArea = new Rectangle() ;
-        solidArea.x = 12 ;
+        solidArea.x = 11 ;
         solidArea.y = 22 ;
         solidArea.height = 20;
         solidArea.width = 20 ;
@@ -289,11 +293,15 @@ public class Player extends Entity{
 
             if (!gp.monster[i].invincible){
 
-                gp.monster[i].life -= 1;
+                gp.monster[i].life -= attack;
                 gp.monster[i].invincible = true;
+                gp.monster[i].damaged = true;
 
                 if (gp.monster[i].life <= 0){
-                    gp.monster[i] = null;
+                    gp.monster[i].dying = true;
+                    gp.monster[i].spriteNum = 0;
+                    gp.monster[i].spriteCounter = 0;
+
                 }
             }
         }

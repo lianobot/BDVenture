@@ -50,10 +50,9 @@ public class EventHandler {
 
     public void damagePit(int gameState){
 
+        //Fix the dialogue Problem
         gp.gameState = gameState;
         gp.ui.currentDialogue = "You fell into a pit";
         gp.player.life -= 1;
     }
-
-
 }
