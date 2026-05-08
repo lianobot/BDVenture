@@ -8,33 +8,39 @@ import java.awt.image.BufferedImage;
 public abstract class Entity {
 
     GamePanel gp;
-    public int worldX, worldY;
-    public int speed;
-    public int sizeScale = 1;
-    public int type;
 
-    //Arrays for direction of entities
-    public BufferedImage[] up, down, left, right;
-    public String direction = "down";
+    // --- POSITION & PHYSICAL PROPERTIES ---
+    public int worldX, worldY;          // Coordinates in the game world
+    public int speed;                   // Movement speed of the entity
+    public int sizeScale = 1;           // Visual scale multiplier
+    public int type;                    // 0 = player, 1 = npc, 2 = monster
+    public String name;                 // Identification name
+    public boolean collision = false;   // Whether the entity is solid/collidable
 
-    public int spriteCounter = 0;
-    public int spriteNum = 0;
+    // --- SPRITES & ANIMATION ---
+    public BufferedImage[] up, down, left, right;  // Animation frame arrays
+    public String direction = "down";              // Current facing direction
+    public int spriteNum = 0;                      // Current frame index in the array
+    public int spriteCounter = 0;                  // Timer to switch between frames
+    public BufferedImage image, image2, image3;    // Individual/static sprites
 
-    public Rectangle solidArea = new Rectangle(0,0,48,48);
-    public boolean collisionOn = false;
-    public int solidAreaDefaultX, solidAreaDefaultY;
-    public int actionLockCounter = 0;
-    String[] dialogues = new String[20];
-    public int dialogueIndex = 0;
-    public BufferedImage image, image2, image3;
-    public String name;
-    public boolean collision = false;
+    // --- COLLISION DETECTION ---
+    public Rectangle solidArea = new Rectangle(0, 0, 48, 48); // Hitbox area
+    public Rectangle attackArea = new Rectangle(0,0,0,0); // Attack Hitbox area
+    public int solidAreaDefaultX, solidAreaDefaultY;         // Reset coordinates for hitbox
+    public boolean collisionOn = false;                       // State of current collision
 
-    // CHARACTER STATUS
-    public boolean invincible = false;
-    public int invincibleCounter;
-    public int maxLife;
-    public int life;
+    // --- DIALOGUE & BEHAVIOR ---
+    public int actionLockCounter = 0;     // Timer to prevent rapid action switching
+    String[] dialogues = new String[20];  // Storage for text lines
+    public int dialogueIndex = 0;         // Current line being spoken
+
+    // --- CHARACTER STATUS ---
+    public int maxLife;                   // Maximum health capacity
+    public int life;                      // Current health points
+    public boolean invincible = false;    // Damage immunity state
+    public int invincibleCounter = 0;     // Timer for how long immunity lasts
+    boolean attacking = false;            // Attacking state
 
 
     public Entity(GamePanel gp){
@@ -93,17 +99,25 @@ public abstract class Entity {
                 case "left": worldX -= speed; break;
                 case "right": worldX += speed; break;
             }
+        }
 
-            spriteCounter++;
-            if (spriteCounter >= 12) {
-                spriteNum++;
+        spriteCounter++;
+        if (spriteCounter >= 12) {
+            spriteNum++;
 
-                BufferedImage[] currentArray = getCurrentAnimationArray();
+            BufferedImage[] currentArray = getCurrentAnimationArray();
 
-                if (currentArray != null && spriteNum >= currentArray.length) {
-                    spriteNum = 0;
-                }
-                spriteCounter = 0;
+            if (currentArray != null && spriteNum >= currentArray.length) {
+                spriteNum = 0;
+            }
+            spriteCounter = 0;
+        }
+
+        if (invincible){
+            invincibleCounter++;
+            if(invincibleCounter > 45){
+                invincible = false;
+                invincibleCounter = 0;
             }
         }
     }
@@ -137,9 +151,17 @@ public abstract class Entity {
                 image = currentArray[spriteNum];
             }
 
+
             if (image != null) {
+                if(invincible){
+                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0.7f));
+                }
                 g2.drawImage(image, screenX, screenY, gp.TILE_SIZE * sizeScale, gp.TILE_SIZE* sizeScale, null);
+
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,1f));
             }
+
+
 
         }
 

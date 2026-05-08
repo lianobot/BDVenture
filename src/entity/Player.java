@@ -29,6 +29,11 @@ public class Player extends Entity{
     public BufferedImage[] walkLeft = new BufferedImage[6];
     public BufferedImage[] walkRight = new BufferedImage[6];
 
+    public BufferedImage[] attackUp = new BufferedImage[4];
+    public BufferedImage[] attackDown = new BufferedImage[4];
+    public BufferedImage[] attackLeft = new BufferedImage[4];
+    public BufferedImage[] attackRight = new BufferedImage[4];
+
 
     public Player(GamePanel gp, KeyHandler keyH){
         super(gp);
@@ -45,6 +50,10 @@ public class Player extends Entity{
         solidArea.width = 20 ;
         solidAreaDefaultX = solidArea.x;
         solidAreaDefaultY = solidArea.y;
+
+        //Attack Hitbox
+        attackArea.width = 36;
+        attackArea.height = 36;
 
         spriteNum = 0;
 
@@ -85,6 +94,14 @@ public class Player extends Entity{
                 walkRight[i] = spriteSheet.getSubimage(i * size, 4 * size, size, size);
                 walkLeft[i]  = flipImage(walkRight[i]);
                 walkUp[i]    = spriteSheet.getSubimage(i * size, 5 * size, size, size);
+
+                // ATTACK ANIMATIONS
+                if (i < 4) {
+                    attackDown[i] = spriteSheet.getSubimage(i * size, 6 * size, size, size);
+                    attackRight[i] = spriteSheet.getSubimage(i * size, 7 * size, size, size);
+                    attackLeft[i] = flipImage(attackRight[i]);
+                    attackUp[i] = spriteSheet.getSubimage(i * size, 8 * size, size, size);
+                }
             }
 
         } catch (IOException e) {
@@ -103,59 +120,70 @@ public class Player extends Entity{
 
     public void update(){
 
-        if (keyH.upPressed || keyH.downPressed || keyH.leftPressed || keyH.rightPressed) {
-            isIdle = false;
-
-            if (keyH.upPressed) {
-                direction = "up";
-            } else if (keyH.downPressed) {
-                direction = "down";
-            } else if (keyH.leftPressed) {
-                direction = "left";
-            } else {
-                direction = "right";
-            }
-
-            // CHECK TILE COLLISION
-            collisionOn = false ;
-            gp.cChecker.checkTile(this) ;
-
+        if(attacking){
+            attacking();
+        }
+        else {
             // CHECK NPC COLLISION
-            int npcIndex = gp.cChecker.checkEntity(this,gp.npc);
+            int npcIndex = gp.cChecker.checkEntity(this, gp.npc);
             interactNPC(npcIndex);
 
-            // CHECK OBJECT COLLISION
-            int objIndex = gp.cChecker.checkObject(this, true);
-            pickUpObject(objIndex);
 
-            // CHECK MONSTER COLLISION
-            int monsterIndex = gp.cChecker.checkEntity(this, gp.monster);
-            contactMonster(monsterIndex);
+            if (keyH.upPressed || keyH.downPressed || keyH.leftPressed || keyH.rightPressed) {
+                isIdle = false;
 
-            // CHECK EVENT
-            gp.eventHandler.checkEvent();
+                if (keyH.upPressed) { direction = "up"; }
+                if (keyH.downPressed) { direction = "down"; }
+                if (keyH.leftPressed) { direction = "left"; }
+                if (keyH.rightPressed) { direction = "right"; }
 
-            // IF COLLISION FALSE, PLAYER MAY MOVE
-            if (!collisionOn) {
-                switch (direction) {
-                    case "up":    worldY -= speed; break;
-                    case "down":  worldY += speed; break;
-                    case "left":  worldX -= speed; break;
-                    case "right": worldX += speed; break;
+                // Normalize Speed
+                double currentSpeed = speed;
+
+                // Check if moving diagonally
+                boolean isDiagonal = (keyH.upPressed || keyH.downPressed) && (keyH.leftPressed || keyH.rightPressed);
+
+                if (isDiagonal) {
+                    currentSpeed *= 0.85;
                 }
+
+                // CHECK TILE COLLISION
+                collisionOn = false;
+                gp.cChecker.checkTile(this);
+
+                // CHECK OBJECT COLLISION
+                int objIndex = gp.cChecker.checkObject(this, true);
+                pickUpObject(objIndex);
+
+                // CHECK MONSTER COLLISION
+                int monsterIndex = gp.cChecker.checkEntity(this, gp.monster);
+                contactMonster(monsterIndex);
+
+                // CHECK EVENT
+                gp.eventHandler.checkEvent();
+
+                // IF COLLISION FALSE, PLAYER MAY MOVE
+                if (!collisionOn && !keyH.ePressed) {
+                    if (keyH.upPressed) { worldY -= (int)currentSpeed; }
+                    if (keyH.downPressed) { worldY += (int)currentSpeed; }
+                    if (keyH.leftPressed) { worldX -= (int)currentSpeed; }
+                    if (keyH.rightPressed) { worldX += (int)currentSpeed; }
+                }
+            } else {
+                isIdle = true;
             }
-        } else {
-            isIdle = true;
         }
 
         // ANIMATION TICKER
         spriteCounter++;
-        if (spriteCounter >= 13) {
-            spriteNum++;
-            if (spriteNum >= 6) { // Loop back to 0 after the 6th frame
-                spriteNum = 0;
+        if (!attacking) {
+            if (spriteCounter >= 13) {
+                spriteNum++;
+                if (spriteNum >= 6) { // Loop back to 0 after the 6th frame
+                    spriteNum = 0;
+                }
+                spriteCounter = 0;
             }
-            spriteCounter = 0;
         }
 
         if (invincible){
@@ -167,6 +195,60 @@ public class Player extends Entity{
         }
     }
 
+    public void attacking() {
+
+        spriteCounter++;
+
+        if (spriteCounter <= 10) {
+            spriteNum = 0;
+        }
+
+        if (spriteCounter > 10 && spriteCounter <= 20) {
+            spriteNum = 1;
+        }
+
+        if (spriteCounter > 20 && spriteCounter <= 30) {
+            spriteNum = 2;
+
+            // Save current worldX, worldY, solidArea
+            int currentWorldX = worldX;
+            int currentWorldY = worldY;
+            int solidAreaWidth = solidArea.width;
+            int solidAreaHeight = solidArea.height;
+
+            // Adjust player's worldX/Y for attackArea
+            switch (direction){
+                case "up" : worldY -= attackArea.height; break;
+                case "down" : worldY += attackArea.height; break;
+                case "left" : worldX -= attackArea.width; break;
+                case "right" : worldX += attackArea.width; break;
+            }
+
+            solidArea.width = attackArea.width;
+            solidArea.height = attackArea.height;
+
+            int monsterIndex = gp.cChecker.checkEntity(this, gp.monster);
+            damageMonster(monsterIndex);
+
+            worldX = currentWorldX;
+            worldY = currentWorldY;
+            solidArea.width = solidAreaWidth;
+            solidArea.height = solidAreaHeight;
+
+        }
+
+        if (spriteCounter > 30 && spriteCounter <= 40) {
+            spriteNum = 3;
+        }
+
+        if (spriteCounter > 40){
+            spriteNum = 0;
+            spriteCounter = 0;
+            attacking = false;
+        }
+
+    }
+
     public void pickUpObject(int i) {
         if (i != 999) {
             //add objects
@@ -174,11 +256,17 @@ public class Player extends Entity{
     }
 
     public void interactNPC(int i){
-        if (i != 999) {
-
-            if (gp.keyH.ePressed) {
+        if (gp.keyH.ePressed) {
+            if (i != 999) {
                 gp.gameState = gp.dialogueState;
                 gp.npc[i].speak();
+            } else {
+                // Only start attack if we aren't already attacking
+                if (!attacking) {
+                    attacking = true;
+                    spriteCounter = 0; // Reset counter for animation
+                    spriteNum = 0;
+                }
             }
         }
         gp.keyH.ePressed = false;
@@ -195,10 +283,35 @@ public class Player extends Entity{
         }
     }
 
+    private void damageMonster(int i) {
+
+        if (i != 999 ){
+
+            if (!gp.monster[i].invincible){
+
+                gp.monster[i].life -= 1;
+                gp.monster[i].invincible = true;
+
+                if (gp.monster[i].life <= 0){
+                    gp.monster[i] = null;
+                }
+            }
+        }
+    }
+
     public void draw(Graphics2D g2) {
         BufferedImage image = null;
 
-        if (isIdle) {
+        if (attacking) {
+            image = switch (direction){
+                case "up" -> attackUp[spriteNum];
+                case "down" -> attackDown[spriteNum];
+                case "left" -> attackLeft[spriteNum];
+                case "right" -> attackRight[spriteNum];
+                default -> image;
+
+            };
+        } else if (isIdle){
             image = switch (direction) {
                 case "up" -> idleUp[spriteNum];
                 case "down" -> idleDown[spriteNum];
