@@ -39,10 +39,10 @@ public class Player extends Entity{
 
         //Collision Box
         solidArea = new Rectangle() ;
-        solidArea.x=12 ;
-        solidArea.y=22 ;
-        solidArea.height=20;
-        solidArea.width=20 ;
+        solidArea.x = 12 ;
+        solidArea.y = 22 ;
+        solidArea.height = 20;
+        solidArea.width = 20 ;
         solidAreaDefaultX = solidArea.x;
         solidAreaDefaultY = solidArea.y;
 
@@ -71,11 +71,14 @@ public class Player extends Entity{
             int size = 48;
 
             for (int i = 0; i < 6; i++) {
+
+
                 // IDLE ANIMATIONS
-                idleDown[i]  = spriteSheet.getSubimage(i * size, 0, size, size);
+                idleDown[i] = spriteSheet.getSubimage(i * size, 0, size, size);
                 idleRight[i] = spriteSheet.getSubimage(i * size, size, size, size);
-                idleLeft[i]  = flipImage(idleRight[i]);
-                idleUp[i]    = spriteSheet.getSubimage(i * size, 2 * size, size, size);
+                idleLeft[i] = flipImage(idleRight[i]);
+                idleUp[i] = spriteSheet.getSubimage(i * size, 2 * size, size, size);
+
 
                 // MOVE ANIMATIONS
                 walkDown[i]  = spriteSheet.getSubimage(i * size, 3 * size, size, size);
@@ -125,6 +128,10 @@ public class Player extends Entity{
             int objIndex = gp.cChecker.checkObject(this, true);
             pickUpObject(objIndex);
 
+            // CHECK MONSTER COLLISION
+            int monsterIndex = gp.cChecker.checkEntity(this, gp.monster);
+            contactMonster(monsterIndex);
+
             // CHECK EVENT
             gp.eventHandler.checkEvent();
 
@@ -150,6 +157,14 @@ public class Player extends Entity{
             }
             spriteCounter = 0;
         }
+
+        if (invincible){
+            invincibleCounter++;
+            if(invincibleCounter > 120){
+                invincible = false;
+                invincibleCounter = 0;
+            }
+        }
     }
 
     public void pickUpObject(int i) {
@@ -169,23 +184,36 @@ public class Player extends Entity{
         gp.keyH.ePressed = false;
     }
 
+    public void contactMonster(int i){
+
+        if (i != 999){
+
+            if (!invincible) {
+                life -= 1;
+                invincible = true;
+            }
+        }
+    }
+
     public void draw(Graphics2D g2) {
         BufferedImage image = null;
 
         if (isIdle) {
-            switch (direction) {
-                case "up":    image = idleUp[spriteNum];    break;
-                case "down":  image = idleDown[spriteNum];  break;
-                case "left":  image = idleLeft[spriteNum];  break;
-                case "right": image = idleRight[spriteNum]; break;
-            }
+            image = switch (direction) {
+                case "up" -> idleUp[spriteNum];
+                case "down" -> idleDown[spriteNum];
+                case "left" -> idleLeft[spriteNum];
+                case "right" -> idleRight[spriteNum];
+                default -> image;
+            };
         } else {
-            switch (direction) {
-                case "up":    image = walkUp[spriteNum];    break;
-                case "down":  image = walkDown[spriteNum];  break;
-                case "left":  image = walkLeft[spriteNum];  break;
-                case "right": image = walkRight[spriteNum]; break;
-            }
+            image = switch (direction) {
+                case "up" -> walkUp[spriteNum];
+                case "down" -> walkDown[spriteNum];
+                case "left" -> walkLeft[spriteNum];
+                case "right" -> walkRight[spriteNum];
+                default -> image;
+            };
         }
         double multiplier = 2.5;
         int drawSize = (int) (gp.TILE_SIZE * multiplier);
@@ -194,11 +222,21 @@ public class Player extends Entity{
         int x = screenX - (drawSize / 3);
         int y = screenY - (drawSize / 2);
 
+        if(invincible){
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0.7f));
+        }
 
         g2.drawImage(image, x, y, drawSize, drawSize, null);
 
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,1f));
+
 //        DEBUG: SHOWS COLLISION BOX
-//        g2.setColor(Color.red);
-//        g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
+        g2.setColor(Color.red);
+        g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
+
+//        g2.setFont(new Font("Arial", Font.PLAIN, 26));
+//        g2.setColor(Color.white);
+//        g2.drawString("Invincible: " + invincibleCounter, 10, 400);
+
         }
     }

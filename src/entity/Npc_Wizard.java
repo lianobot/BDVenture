@@ -3,6 +3,7 @@ package entity;
 import main.GamePanel;
 
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -19,10 +20,11 @@ public class Npc_Wizard extends Entity{
     }
 
     public void getImage(){
+        down = new BufferedImage[2];
         try {
 
-            down1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_1.png")));
-            down2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_2.png")));
+            down[0] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_1.png")));
+            down[1] = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/npc/wizard_down_2.png")));
 
         } catch (IOException e){
             e.printStackTrace();

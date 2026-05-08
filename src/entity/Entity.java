@@ -10,21 +10,29 @@ public abstract class Entity {
     GamePanel gp;
     public int worldX, worldY;
     public int speed;
+    public int sizeScale = 1;
+    public int type;
 
-    public BufferedImage up1, up2, down1, down2, left1, left2, right1, right2;
-    public String direction;
+    //Arrays for direction of entities
+    public BufferedImage[] up, down, left, right;
+    public String direction = "down";
 
     public int spriteCounter = 0;
-    public int spriteNum = 1;
+    public int spriteNum = 0;
+
     public Rectangle solidArea = new Rectangle(0,0,48,48);
     public boolean collisionOn = false;
-    public int solidAreaDefaultX;
-    public int solidAreaDefaultY;
+    public int solidAreaDefaultX, solidAreaDefaultY;
     public int actionLockCounter = 0;
     String[] dialogues = new String[20];
     public int dialogueIndex = 0;
+    public BufferedImage image, image2, image3;
+    public String name;
+    public boolean collision = false;
 
     // CHARACTER STATUS
+    public boolean invincible = false;
+    public int invincibleCounter;
     public int maxLife;
     public int life;
 
@@ -65,36 +73,50 @@ public abstract class Entity {
         collisionOn = false;
         gp.cChecker.checkTile(this);
         gp.cChecker.checkObject(this, false);
-        gp.cChecker.checkPlayer(this);
+        gp.cChecker.checkEntity(this, gp.npc);
+        gp.cChecker.checkEntity(this, gp.monster);
+        boolean contactPlayer = gp.cChecker.checkPlayer(this);
+
+        if(this.type == 2 && contactPlayer){
+            if(!gp.player.invincible){
+                //we give damage
+                gp.player.life -= 1;
+                gp.player.invincible = true;
+            }
+        }
 
         //IF COLLISION FALSE, ENTITY MAY MOVE
-        if(!collisionOn){
-            switch(direction){
-                case"up":
-                    worldY -= speed;
-                    break;
-                case "down":
-                    worldY += speed;
-                    break;
-                case "left":
-                    worldX -= speed;
-                    break;
-                case"right":
-                    worldX += speed;
-                    break ;
+        if (!collisionOn) {
+            switch (direction) {
+                case "up": worldY -= speed; break;
+                case "down": worldY += speed; break;
+                case "left": worldX -= speed; break;
+                case "right": worldX += speed; break;
             }
 
             spriteCounter++;
             if (spriteCounter >= 12) {
-                if (spriteNum == 1) {
-                    spriteNum = 2;
-                } else if (spriteNum == 2) {
-                    spriteNum = 1;
+                spriteNum++;
+
+                BufferedImage[] currentArray = getCurrentAnimationArray();
+
+                if (currentArray != null && spriteNum >= currentArray.length) {
+                    spriteNum = 0;
                 }
                 spriteCounter = 0;
             }
-
         }
+    }
+
+    // Helper to get the correct array for the current direction
+    public BufferedImage[] getCurrentAnimationArray() {
+        return switch (direction) {
+            case "up" -> up;
+            case "down" -> down;
+            case "left" -> left;
+            case "right" -> right;
+            default -> null;
+        };
     }
 
     public void draw(Graphics2D g2){
@@ -103,46 +125,25 @@ public abstract class Entity {
         int screenX = worldX - gp.player.worldX + gp.player.screenX;
         int screenY = worldY - gp.player.worldY + gp.player.screenY;
 
+        // Frustum Culling (Only draw if on screen)
         if (worldX + gp.TILE_SIZE > gp.player.worldX - gp.player.screenX &&
                 worldX - gp.TILE_SIZE < gp.player.worldX + gp.player.screenX &&
                 worldY + gp.TILE_SIZE > gp.player.worldY - gp.player.screenY &&
                 worldY - gp.TILE_SIZE < gp.player.worldY + gp.player.screenY) {
-            switch (direction) {
-                case "up":
-                    if (spriteNum == 1) {
-                        image = up1;
-                    }
-                    if (spriteNum == 2) {
-                        image = up2;
-                    }
-                    break;
-                case "down":
-                    if (spriteNum == 1) {
-                        image = down1;
-                    }
-                    if (spriteNum == 2) {
-                        image = down2;
-                    }
-                    break;
-                case "left":
-                    if (spriteNum == 1) {
-                        image = left1;
-                    }
-                    if (spriteNum == 2) {
-                        image = left2;
-                    }
-                    break;
-                case "right":
-                    if (spriteNum == 1) {
-                        image = right1;
-                    }
-                    if (spriteNum == 2) {
-                        image = right2;
-                    }
-                    break;
+
+            BufferedImage[] currentArray = getCurrentAnimationArray();
+
+            if (currentArray != null && spriteNum < currentArray.length) {
+                image = currentArray[spriteNum];
             }
 
-            g2.drawImage(image, screenX, screenY, gp.TILE_SIZE, gp.TILE_SIZE, null);
+            if (image != null) {
+                g2.drawImage(image, screenX, screenY, gp.TILE_SIZE * sizeScale, gp.TILE_SIZE* sizeScale, null);
+            }
+
         }
+
+        g2.setColor(Color.red);
+        g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
     }
 }
