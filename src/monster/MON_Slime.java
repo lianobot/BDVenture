@@ -21,9 +21,9 @@ public class MON_Slime extends Entity {
         maxLife = 2;
         life = maxLife;
         type = 2;
-        sizeScale = 2;
-        attackArea.width = 32;
-        attackArea.height = 32;
+        sizeScale = 1.5;
+        attackArea.width = 0;
+        attackArea.height = 0;
         this.attack = 1;
 
         //ANIMATIONS
@@ -53,10 +53,10 @@ public class MON_Slime extends Entity {
         dieRight = new BufferedImage[5];
 
         //HITBOX
-        solidArea.x = 32;
-        solidArea.y = 34;
-        solidArea.width = 32;
-        solidArea.height = 20;
+        solidArea.x = 24;
+        solidArea.y = 16;
+        solidArea.width = 24;
+        solidArea.height = 16;
         solidAreaDefaultX = solidArea.x;
         solidAreaDefaultY = solidArea.y;
 
@@ -105,9 +105,10 @@ public class MON_Slime extends Entity {
 
                 // DEATH ANIMATION
                 if (i < 5) {
-                    dieRight[i] = spriteSheet.getSubimage(i * size, 12 * size, size, size);
+                    dieDown[i] = spriteSheet.getSubimage(i * size, 12 * size, size, size);
+                    dieRight[i] = dieDown[i];
                     dieLeft[i] = flipImage(dieRight[i]);
-                    dieUp = dieRight = dieDown;
+                    dieUp[i] = dieDown[i];
                 }
             }
 
@@ -127,44 +128,53 @@ public class MON_Slime extends Entity {
 
     @Override
     public void setAction() {
+        actionLockCounter++;
 
-        // Calculate distance to player
-        int xDistance = Math.abs(worldX - gp.player.worldX);
-        int yDistance = Math.abs(worldY - gp.player.worldY);
-        int tileDistance = (xDistance + yDistance) / gp.TILE_SIZE;
+        // Re-think direction every 30 frames
+        if (actionLockCounter >= 20) {
 
-        // 1. ATTACKING STATE
-        if (tileDistance < 2) {
-            actionLockCounter++;
-            if (actionLockCounter > 20) { // Slight delay before attack
-                attacking = true;
-                actionLockCounter = 0;
-            }
-        }
-        // 2. CHASING STATE
-        else if (tileDistance < 10) {
-            // Move towards player
-            if (worldX < gp.player.worldX) { direction = "right"; }
-            else if (worldX > gp.player.worldX) { direction = "left"; }
+            // Calculate distance to player
+            int xDistance = Math.abs(worldX - gp.player.worldX);
+            int yDistance = Math.abs(worldY - gp.player.worldY);
+            int tileDistance = (xDistance + yDistance) / gp.TILE_SIZE;
 
-            // Vertical check
-            if (yDistance > xDistance) {
-                if (worldY < gp.player.worldY) { direction = "down"; }
-                else if (worldY > gp.player.worldY) { direction = "up"; }
+            // 1. CHASING STATE
+            if (tileDistance < 6) {
+                // Move towards player
+                if (xDistance > yDistance) {
+                    if (worldX < gp.player.worldX) {
+                        direction = "right";
+                    } else if (worldX > gp.player.worldX) {
+                        direction = "left";
+                    }
+                } else {
+                    if (worldY < gp.player.worldY) {
+                        direction = "down";
+                    } else if (worldY > gp.player.worldY) {
+                        direction = "up";
+                    }
+                }
             }
-        }
-        // 3. WANDERING STATE
-        else {
-            actionLockCounter++;
-            if (actionLockCounter == 120) {
-                Random random = new Random();
-                int i = random.nextInt(100) + 1;
-                if (i <= 25) { direction = "up"; }
-                else if (i <= 50) { direction = "down"; }
-                else if (i <= 75) { direction = "left"; }
-                else { direction = "right"; }
-                actionLockCounter = 0;
+
+            // 2. WANDERING STATE
+            else {
+                actionLockCounter++;
+                if (actionLockCounter == 120) {
+                    Random random = new Random();
+                    int i = random.nextInt(125) + 1;
+                    if (i <= 25) {
+                        direction = "up";
+                    } else if (i <= 50) {
+                        direction = "down";
+                    } else if (i <= 75) {
+                        direction = "left";
+                    } else if (i <= 100) {
+                        direction = "right";
+                    }
+                    actionLockCounter = 0;
+                }
             }
+            actionLockCounter = 0;
         }
     }
 }

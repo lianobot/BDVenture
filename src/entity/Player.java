@@ -128,10 +128,11 @@ public class Player extends Entity{
             attacking();
         }
         else {
+
             // CHECK NPC COLLISION
+            collisionOn = false;
             int npcIndex = gp.cChecker.checkEntity(this, gp.npc);
             interactNPC(npcIndex);
-
 
             if (keyH.upPressed || keyH.downPressed || keyH.leftPressed || keyH.rightPressed) {
                 isIdle = false;
@@ -152,7 +153,6 @@ public class Player extends Entity{
                 }
 
                 // CHECK TILE COLLISION
-                collisionOn = false;
                 gp.cChecker.checkTile(this);
 
                 // CHECK OBJECT COLLISION
@@ -280,7 +280,7 @@ public class Player extends Entity{
 
         if (i != 999){
 
-            if (!invincible) {
+            if (!invincible && !gp.monster[i].dying) {
                 life -= 1;
                 invincible = true;
             }

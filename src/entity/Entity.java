@@ -12,7 +12,7 @@ public abstract class Entity {
     // --- POSITION & PHYSICAL PROPERTIES ---
     public int worldX, worldY;          // Coordinates in the game world
     public int speed;                   // Movement speed of the entity
-    public int sizeScale = 1;           // Visual scale multiplier
+    public double sizeScale = 1;        // Visual scale multiplier
     public int type;                    // 0 = player, 1 = npc, 2 = monster
     public String name;                 // Identification name
     public boolean collision = false;   // Whether the entity is solid/collidable
@@ -88,72 +88,76 @@ public abstract class Entity {
 
     public void update() {
 
+        // 1. MONSTER Death Guard
         if (dying) {
             dyingAnimation();
-        } else if (attacking) {
-            monsterAttack();
-        } else {
-            setAction();
+            return;
+        }
 
-            collisionOn = false;
-            gp.cChecker.checkTile(this);
-            gp.cChecker.checkObject(this, false);
-            gp.cChecker.checkEntity(this, gp.npc);
-            gp.cChecker.checkEntity(this, gp.monster);
-            boolean contactPlayer = gp.cChecker.checkPlayer(this);
+        // 2. Entity Ai
+        setAction();
 
-            if (this.type == 2 && contactPlayer) {
-                if (!gp.player.invincible) {
-                    //player gets damaged
-                    gp.player.life -= 1;
-                    gp.player.invincible = true;
-                }
-            }
+        // 3. Entity Collision Checks
+        collisionOn = false;
+        gp.cChecker.checkTile(this);
+        gp.cChecker.checkObject(this, false);
+        gp.cChecker.checkEntity(this, gp.npc);
+        gp.cChecker.checkEntity(this, gp.monster);
 
-            //IF COLLISION FALSE, ENTITY MAY MOVE
-            if (!collisionOn) {
-                switch (direction) {
-                    case "up":
-                        worldY -= speed;
-                        break;
-                    case "down":
-                        worldY += speed;
-                        break;
-                    case "left":
-                        worldX -= speed;
-                        break;
-                    case "right":
-                        worldX += speed;
-                        break;
-                }
-            }
+        // Check Entity contact with player
+        boolean contactPlayer = gp.cChecker.checkPlayer(this);
 
-            //Normal Animation
-            spriteCounter++;
-            if (spriteCounter >= 12) {
-                spriteNum++;
-                BufferedImage[] currentArray = getActiveArray();
-                if (currentArray != null && spriteNum >= currentArray.length) {
-                    spriteNum = 0;
-                }
-                spriteCounter = 0;
-            }
-
-            if (invincible) {
-                invincibleCounter++;
-                if (invincibleCounter > 45) {
-                    invincible = false;
-                    invincibleCounter = 0;
-                    damaged = false;
-                }
+        // Player takes damage if contact and MONSTER not dying
+        if (this.type == 2 && contactPlayer && !dying) {
+            if (!gp.player.invincible) {
+                //player gets damaged
+                gp.player.life -= 1;
+                gp.player.invincible = true;
             }
         }
+
+        // 4. Entity Movement
+        if (!collisionOn) {
+            switch (direction) {
+                case "up" -> worldY -= speed;
+                case "down" -> worldY += speed;
+                case "left" -> worldX -= speed;
+                case "right" -> worldX += speed;
+            }
+        }
+
+        // 5. Entity Animation
+        spriteCounter++;
+        if (spriteCounter >= 12) {
+            spriteNum++;
+            BufferedImage[] currentArray = getActiveArray();
+
+            if (currentArray != null && spriteNum >= currentArray.length) {
+                spriteNum = 0;
+            }
+            spriteCounter = 0;
+        }
+
+        // 6. Entity Invincibility
+        if (invincible) {
+            invincibleCounter++;
+            if (invincibleCounter > 45) {
+                invincible = false;
+                invincibleCounter = 0;
+                damaged = false;
+            }
+        }
+
     }
 
 
     // Helper to get dying animation
     private void dyingAnimation() {
         dyingCounter++;
+
+        // Remove hitbox
+        solidArea.width = 0;
+        solidArea.height = 0;
 
         // Animate death frames
         spriteCounter++;
@@ -171,78 +175,6 @@ public abstract class Entity {
             alive = false; // Final removal
         }
     }
-
-    public void monsterAttack() {
-        spriteCounter++;
-
-        // 1. STARTUP: The "Wind-up" phase (Frame 0-1)
-        if (spriteCounter <= 5) {
-            spriteNum = 0;
-        }
-        if (spriteCounter > 5 && spriteCounter <= 15) {
-            spriteNum = 1;
-        }
-
-        // 2. ACTIVE: The "Hit" phase (Frame 2)
-        if (spriteCounter > 15 && spriteCounter <= 25) {
-            spriteNum = 2;
-
-            // Save current solidArea to restore it later
-            int currentWorldX = worldX;
-            int currentWorldY = worldY;
-            int solidAreaWidth = solidArea.width;
-            int solidAreaHeight = solidArea.height;
-
-            // Shift the entity's position/hitbox to represent the "Attack Area"
-            switch (direction) {
-                case "up": worldY -= attackArea.height; break;
-                case "down": worldY += attackArea.height; break;
-                case "left": worldX -= attackArea.width; break;
-                case "right": worldX += attackArea.width; break;
-            }
-
-            // Change solidArea to attackArea for the collision check
-            solidArea.width = attackArea.width;
-            solidArea.height = attackArea.height;
-
-            // Check if this temporary "Attack Box" hits the player
-            if (gp.cChecker.checkPlayer(this)) {
-                damagePlayer(attack); // You can pass a specific attack value here
-            }
-
-            // Restore original property values
-            worldX = currentWorldX;
-            worldY = currentWorldY;
-            solidArea.width = solidAreaWidth;
-            solidArea.height = solidAreaHeight;
-        }
-
-        // 3. RECOVERY: The "Cool-down" phase (Frame 3)
-        if (spriteCounter > 25 && spriteCounter <= 35) {
-            spriteNum = 3;
-        }
-
-        // 4. FINISH
-        if (spriteCounter > 35) {
-            spriteNum = 0;
-            spriteCounter = 0;
-            attacking = false;
-        }
-    }
-
-    public void damagePlayer(int attack) {
-        if (!gp.player.invincible) {
-            // We can add a hit sound effect here: gp.playSE(index);
-
-            int damage = attack - gp.player.defense; // Basic damage math
-            if (damage < 0) damage = 0;
-
-            gp.player.life -= (damage > 0) ? damage : 1; // Minimum 1 damage
-            gp.player.invincible = true;
-        }
-    }
-
-
 
     public void draw(Graphics2D g2){
 
@@ -266,10 +198,16 @@ public abstract class Entity {
 
 
             if (image != null) {
+
+                int drawSize = (int)(gp.TILE_SIZE * sizeScale);
+
+                int x = screenX;
+                int y = screenY - (drawSize / 4);
+
                 if(invincible){
                     g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0.8f));
                 }
-                g2.drawImage(image, screenX, screenY, gp.TILE_SIZE * sizeScale, gp.TILE_SIZE* sizeScale, null);
+                g2.drawImage(image, x, y, (int)(gp.TILE_SIZE * sizeScale), (int)(gp.TILE_SIZE* sizeScale), null);
 
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,1f));
             }

@@ -15,10 +15,10 @@ public class Npc_Wizard extends Entity{
 
         direction = "down";
 
-        solidArea.x = 10;
-        solidArea.y = 18;
+        solidArea.x = 8;
+        solidArea.y = 12;
         solidArea.width = 32;
-        solidArea.height = 30;
+        solidArea.height = 32;
         solidAreaDefaultX = solidArea.x;
         solidAreaDefaultY = solidArea.y;
 

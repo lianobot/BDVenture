@@ -22,7 +22,7 @@ public class EventHandler {
 
     public void checkEvent(){
 
-        if (hit(75,65,"down")){damagePit(gp.dialogueState);}
+        //add events here
     }
 
     public boolean hit(int eventCol, int eventRow, String reqDirection){
