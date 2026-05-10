@@ -57,8 +57,8 @@ public abstract class Entity {
         this.gp = gp;
     }
 
-    public void setAction() {
-    }
+    public void setAction() {}
+    public void damageReaction(){}
 
     public void speak() {
 
@@ -111,6 +111,7 @@ public abstract class Entity {
         if (this.type == 2 && contactPlayer && !dying) {
             if (!gp.player.invincible) {
                 //player gets damaged
+                gp.playSE(2);
                 gp.player.life -= 1;
                 gp.player.invincible = true;
             }

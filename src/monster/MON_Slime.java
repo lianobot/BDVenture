@@ -171,7 +171,6 @@ public class MON_Slime extends Entity {
                     } else if (i <= 100) {
                         direction = "right";
                     }
-                    actionLockCounter = 0;
                 }
             }
             actionLockCounter = 0;

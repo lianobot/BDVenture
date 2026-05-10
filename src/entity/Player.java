@@ -267,6 +267,7 @@ public class Player extends Entity{
             } else {
                 // Only start attack if we aren't already attacking
                 if (!attacking) {
+                    gp.playSE(3);
                     attacking = true;
                     spriteCounter = 0; // Reset counter for animation
                     spriteNum = 0;
@@ -281,6 +282,7 @@ public class Player extends Entity{
         if (i != 999){
 
             if (!invincible && !gp.monster[i].dying) {
+                gp.playSE(2);
                 life -= 1;
                 invincible = true;
             }
@@ -292,6 +294,8 @@ public class Player extends Entity{
         if (i != 999 ){
 
             if (!gp.monster[i].invincible){
+
+                gp.playSE(1);
 
                 gp.monster[i].life -= attack;
                 gp.monster[i].invincible = true;
