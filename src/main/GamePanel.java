@@ -7,9 +7,9 @@ import tile.TileManager;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Arrays;
 
-public class GamePanel extends JPanel implements Runnable{
+public class GamePanel extends JPanel implements Runnable {
 
     //SCREEN SETTINGS
     final int ORIGINAL_TILE_SIZE = 16; // 16x16 tile
@@ -30,30 +30,39 @@ public class GamePanel extends JPanel implements Runnable{
     int FPS = 60;
 
     //SYSTEM
+    Font arial_40 = new Font("Arial", Font.PLAIN, 40);
     TileManager tileM = new TileManager(this);
     public KeyHandler keyH = new KeyHandler(this);
-    Sound sound = new Sound() ;
-    public CollisionChecker cChecker= new CollisionChecker(this) ;
+    Sound sound = new Sound();
+    public CollisionChecker cChecker = new CollisionChecker(this);
     public AssetSetter assetSetter = new AssetSetter(this);
     public UI ui = new UI(this);
     public EventHandler eventHandler = new EventHandler(this);
-    Thread gameThread;
+    volatile Thread gameThread;
+    Thread enemyLogicThread;
+    Thread playtimeMonitorThread;
+    private volatile boolean workerThreadsRunning = false;
 
     //ENTITY AND OBJECT
-    public Player player = new Player(this,keyH);
+    public Player player = new Player(this, keyH);
     public Entity[] obj = new Entity[10];
     public Entity[] npc = new Entity[10];
     public Entity[] monster = new Entity[10];
+    public final Object monsterLock = new Object();
     ArrayList<Entity> entityArrayList = new ArrayList<>();
+    public int playTimeSeconds = 0;
 
     //GAME STATE
-    public int gameState;
+    public volatile int gameState;
     public final int titleState = 0;
     public final int playState = 1;
     public final int pauseState = 2;
     public final int dialogueState = 3;
+    public final int gameOverState = 4;
+    private long gameOverStartTime;
+    private boolean gameOverSoundPlayed = false;
 
-    public GamePanel(){
+    public GamePanel() {
 
         this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         this.setBackground(Color.black);
@@ -61,6 +70,7 @@ public class GamePanel extends JPanel implements Runnable{
         this.addKeyListener(keyH);
         this.setFocusable(true);
     }
+
     public void setupGame() {
 
         assetSetter.setObject();
@@ -68,7 +78,16 @@ public class GamePanel extends JPanel implements Runnable{
         assetSetter.setMonster();
         gameState = titleState;
     }
-    public void startGameThread(){
+
+    public void startGameThread() {
+
+        workerThreadsRunning = true;
+        enemyLogicThread = new Thread(new EnemyLogicWorker(), "Enemy Logic Thread");
+        enemyLogicThread.start();
+
+        playtimeMonitorThread = new Thread(new PlaytimeMonitor(), "Playtime Monitor Thread");
+        playtimeMonitorThread.setDaemon(true);
+        playtimeMonitorThread.start();
 
         gameThread = new Thread(this);
         gameThread.start();
@@ -79,18 +98,18 @@ public class GamePanel extends JPanel implements Runnable{
     @Override
     public void run() {
 
-        double drawInterval = (double) 1000000000 /FPS;
+        double drawInterval = (double) 1000000000 / FPS;
         double delta = 0;
         long lastTime = System.nanoTime();
         long currentTime;
 
-        while (gameThread != null){
+        while (gameThread != null) {
 
             currentTime = System.nanoTime();
-            delta += (currentTime-lastTime)/drawInterval;
+            delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
 
-            if (delta >= 1){
+            if (delta >= 1) {
                 //1. UPDATE: update information such as character position.
                 update();
                 //2. DRAW: draw the screen.
@@ -102,7 +121,8 @@ public class GamePanel extends JPanel implements Runnable{
         }
 
     }
-    public void update(){
+
+    public void update() {
 
         if (gameState == playState) {
             //PLAYER
@@ -115,9 +135,51 @@ public class GamePanel extends JPanel implements Runnable{
                 }
             }
 
-            //MONSTER
-            for (int i = 0; i < monster.length; i++){
-                if (monster[i] != null){
+            //Check if player died
+            if (player.life <= 0){
+                triggerGameOver();
+            }
+        }
+        if (gameState == pauseState) {
+            //nothing atm
+        }
+    }
+
+    public void triggerGameOver(){
+        if (gameState != gameOverState){
+            gameState = gameOverState;
+            gameOverStartTime = System.currentTimeMillis();
+
+            if (!gameOverSoundPlayed){
+                stopMusic();
+                playSE(5);
+                gameOverSoundPlayed = true;
+            }
+        }
+    }
+
+    //After 3 seconds of death, Show prompt to return to title
+    public boolean isGameOverPromptReady(){
+        return gameState == gameOverState && System.currentTimeMillis() - gameOverStartTime >= 3000;
+    }
+
+    public void returnToTileScreen(){
+        stopMusic();
+        keyH.resetMovementKeys();
+        player.setDefaultValues();
+        synchronized (monsterLock){
+            Arrays.fill(monster, null);
+        }
+        assetSetter.setMonster();
+        gameOverSoundPlayed = false;
+        gameState = titleState;
+    }
+
+    //MONSTER
+    private void updateMonsters() {
+        synchronized (monsterLock) {
+            for (int i = 0; i < monster.length; i++) {
+                if (monster[i] != null) {
                     if (monster[i].alive) {
                         monster[i].update();
                     }
@@ -128,12 +190,9 @@ public class GamePanel extends JPanel implements Runnable{
                 }
             }
         }
-        if (gameState == pauseState){
-            //nothing atm
-        }
     }
 
-    public void paintComponent(Graphics g){
+    public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
@@ -145,7 +204,7 @@ public class GamePanel extends JPanel implements Runnable{
 
 
         //TITLE SCREEN
-        if (gameState == titleState){
+        if (gameState == titleState) {
             ui.draw(g2);
         }
         //OTHERS
@@ -156,27 +215,26 @@ public class GamePanel extends JPanel implements Runnable{
 
             //ADD all ENTITIES TO LIST
             entityArrayList.add(player);
-
             for (Entity entity : npc) {
                 if (entity != null) {
                     entityArrayList.add(entity);
                 }
             }
-
             for (Entity entity : obj) {
                 if (entity != null) {
                     entityArrayList.add(entity);
                 }
             }
-
-            for (Entity entity : monster) {
-                if (entity != null) {
-                    entityArrayList.add(entity);
+            synchronized (monsterLock) {
+                for (Entity entity : monster) {
+                    if (entity != null) {
+                        entityArrayList.add(entity);
+                    }
                 }
             }
 
 
-            //SORT
+            //SORT by Y level of entities
             entityArrayList.sort((e1, e2) -> {
 
                 int result = Integer.compare(e1.worldY, e2.worldY);
@@ -201,23 +259,63 @@ public class GamePanel extends JPanel implements Runnable{
             long drawEnd = System.nanoTime();
             long passed = drawEnd - drawStart;
             g2.setColor(Color.white);
+            g2.setFont(arial_40.deriveFont(Font.BOLD, 28F));
             g2.drawString("Draw Time: " + passed, 10, 400);
         }
 
         g2.dispose();
 
     }
-public void playMusic (int i){
-        sound.setFile(i) ;
-        sound.play() ;
-        sound.loop() ;
 
-}
-public void stopMusic(){
-        sound.stop();
-}
-public void playSE(int i){
-        sound.setFile(i);
-        sound.play();
-}
+    public void playMusic(int i) {
+        sound.playMusic(i);
+    }
+
+    public void stopMusic() {
+        sound.stopMusic();
+    }
+
+    public void playSE(int i) {
+        sound.playSoundEffect(i);
+    }
+
+    public int getPlayTimeSeconds() {
+        return playTimeSeconds;
+    }
+
+    private class EnemyLogicWorker implements Runnable {
+        @Override
+        public void run() {
+            long sleepTime = 1000 / FPS;
+
+            while (workerThreadsRunning) {
+                if (gameState == playState) {
+                    updateMonsters();
+                }
+
+                try {
+                    Thread.sleep(sleepTime);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+    }
+
+    private class PlaytimeMonitor implements Runnable {
+        @Override
+        public void run() {
+            while (workerThreadsRunning) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                playTimeSeconds++;
+
+            }
+        }
+    }
 }

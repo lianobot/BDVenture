@@ -16,7 +16,7 @@ public class Npc_Wizard extends Entity{
         direction = "down";
 
         solidArea.x = 8;
-        solidArea.y = 12;
+        solidArea.y = 4;
         solidArea.width = 32;
         solidArea.height = 32;
         solidAreaDefaultX = solidArea.x;

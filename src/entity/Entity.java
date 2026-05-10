@@ -177,7 +177,7 @@ public abstract class Entity {
         }
     }
 
-    public void draw(Graphics2D g2){
+    public void draw(Graphics2D g2) {
 
         BufferedImage image = null;
         int screenX = worldX - gp.player.worldX + gp.player.screenX;
@@ -200,25 +200,29 @@ public abstract class Entity {
 
             if (image != null) {
 
-                int drawSize = (int)(gp.TILE_SIZE * sizeScale);
+                int drawSize = (int) (gp.TILE_SIZE * sizeScale);
 
                 int x = screenX;
                 int y = screenY - (drawSize / 4);
 
-                if(invincible){
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0.8f));
+                if (invincible) {
+                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
                 }
-                g2.drawImage(image, x, y, (int)(gp.TILE_SIZE * sizeScale), (int)(gp.TILE_SIZE* sizeScale), null);
+                g2.drawImage(image, x, y, (int) (gp.TILE_SIZE * sizeScale), (int) (gp.TILE_SIZE * sizeScale), null);
 
-                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,1f));
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
-
 
 
         }
 
-        g2.setColor(Color.red);
-        g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
+        if (gp.keyH.showCollisionBox) {
+            g2.setColor(Color.red);
+            Stroke oldStroke = g2.getStroke();
+            g2.setStroke(new BasicStroke(2));
+            g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
+            g2.setStroke(oldStroke);
+        }
     }
 
     // Helper to get the correct array for the current direction
@@ -237,5 +241,4 @@ public abstract class Entity {
         }
         return switch(direction) { case "up" -> idleUp; case "left" -> idleLeft; case "right" -> idleRight; default -> idleDown; };
     }
-
 }

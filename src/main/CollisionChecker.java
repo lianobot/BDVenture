@@ -105,6 +105,18 @@ public class CollisionChecker {
     //NPC OR MONSTER COLLISION
     public int checkEntity(Entity entity, Entity[] target){
 
+        if (target == gp.monster) {
+            synchronized (gp.monsterLock) {
+                return checkEntityUnsafe(entity, target);
+            }
+        }
+
+        return checkEntityUnsafe(entity, target);
+    }
+
+    //HELPER
+    private int checkEntityUnsafe(Entity entity, Entity[] target){
+
         int index = 999;
 
         for (int i = 0; i < target.length; i++) {

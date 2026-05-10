@@ -9,11 +9,18 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Objects;
 
-public class Player extends Entity{
+public class Player extends Entity {
 
     KeyHandler keyH;
     public final int screenX;
     public final int screenY;
+    private static final double DRAW_SCALE = 2.5;
+    private static final int BODY_PIXELS_X = 18;
+    private static final int BODY_PIXELS_Y = 30;
+    private static final int BODY_PIXELS_WIDTH = 13;
+    private static final int BODY_PIXELS_HEIGHT = 13;
+    private static final int ATTACK_REACH = 24;
+    private static final int ATTACK_PADDING = 4;
 
     // Player Stats
     public int attack = 1;
@@ -39,32 +46,29 @@ public class Player extends Entity{
     public BufferedImage[] attackRight = new BufferedImage[4];
 
 
-    public Player(GamePanel gp, KeyHandler keyH){
+    public Player(GamePanel gp, KeyHandler keyH) {
         super(gp);
         this.keyH = keyH;
 
-        screenX = gp.SCREEN_WIDTH/2 - (gp.TILE_SIZE/2);
-        screenY = gp.SCREEN_HEIGHT/2 - (gp.TILE_SIZE/2);
+        screenX = gp.SCREEN_WIDTH / 2 - (gp.TILE_SIZE / 2);
+        screenY = gp.SCREEN_HEIGHT / 2 - (gp.TILE_SIZE / 2);
 
         //Collision Box
-        solidArea = new Rectangle() ;
-        solidArea.x = 11 ;
-        solidArea.y = 22 ;
-        solidArea.height = 20;
-        solidArea.width = 20 ;
+        solidArea = createBodyCollisionBox();
         solidAreaDefaultX = solidArea.x;
         solidAreaDefaultY = solidArea.y;
 
         //Attack Hitbox
-        attackArea.width = 36;
-        attackArea.height = 36;
+        attackArea.width = ATTACK_REACH;
+        attackArea.height = ATTACK_REACH;
 
         spriteNum = 0;
 
         setDefaultValues();
         getImage();
     }
-    public void setDefaultValues(){
+
+    public void setDefaultValues() {
 
         worldX = gp.TILE_SIZE * 78;
         worldY = gp.TILE_SIZE * 63;
@@ -75,9 +79,17 @@ public class Player extends Entity{
         //PLAYER STATUS
         maxLife = 6;
         life = maxLife;
+
+        isIdle = true;
+        attacking = false;
+        invincible = false;
+        invincibleCounter = 0;
+        spriteNum = 0;
+        spriteCounter = 0;
+        collisionOn = false;
     }
 
-    public void getImage(){
+    public void getImage() {
         try {
             // Read the main 48x48 sprite sheet
             BufferedImage spriteSheet = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/player/player.png")));
@@ -94,10 +106,10 @@ public class Player extends Entity{
 
 
                 // MOVE ANIMATIONS
-                walkDown[i]  = spriteSheet.getSubimage(i * size, 3 * size, size, size);
+                walkDown[i] = spriteSheet.getSubimage(i * size, 3 * size, size, size);
                 walkRight[i] = spriteSheet.getSubimage(i * size, 4 * size, size, size);
-                walkLeft[i]  = flipImage(walkRight[i]);
-                walkUp[i]    = spriteSheet.getSubimage(i * size, 5 * size, size, size);
+                walkLeft[i] = flipImage(walkRight[i]);
+                walkUp[i] = spriteSheet.getSubimage(i * size, 5 * size, size, size);
 
                 // ATTACK ANIMATIONS
                 if (i < 4) {
@@ -122,12 +134,84 @@ public class Player extends Entity{
         return flipped;
     }
 
-    public void update(){
+    //Player HitBox
+    private Rectangle createBodyCollisionBox() {
+        int drawSize = (int) (gp.TILE_SIZE * DRAW_SCALE);
+        int drawOffsetX = -(drawSize / 3);
+        int drawOffsetY = -(drawSize / 2);
 
-        if(attacking){
-            attacking();
+        int x = drawOffsetX + (int) Math.round(BODY_PIXELS_X * DRAW_SCALE);
+        int y = drawOffsetY + (int) Math.round(BODY_PIXELS_Y * DRAW_SCALE);
+        int width = (int) Math.round(BODY_PIXELS_WIDTH * DRAW_SCALE);
+        int height = (int) Math.round(BODY_PIXELS_HEIGHT * DRAW_SCALE);
+
+        return new Rectangle(x, y, width, height);
+    }
+
+    //Player AttackBox
+    private Rectangle getAttackWorldBox() {
+        Rectangle bodyBox = new Rectangle(
+                worldX + solidAreaDefaultX,
+                worldY + solidAreaDefaultY,
+                solidArea.width,
+                solidArea.height
+        );
+
+        return switch (direction) {
+            case "up" -> new Rectangle(
+                    bodyBox.x - ATTACK_PADDING,
+                    bodyBox.y - ATTACK_REACH * 2,
+                    bodyBox.width + ATTACK_PADDING * 2,
+                    ATTACK_REACH * 2
+            );
+            case "down" -> new Rectangle(
+                    bodyBox.x - ATTACK_PADDING,
+                    bodyBox.y + bodyBox.height,
+                    bodyBox.width + ATTACK_PADDING * 2,
+                    ATTACK_REACH * 2
+            );
+            case "left" -> new Rectangle(
+                    bodyBox.x - ATTACK_REACH * 2,
+                    bodyBox.y,
+                    ATTACK_REACH * 2,
+                    bodyBox.height
+            );
+            case "right" -> new Rectangle(
+                    bodyBox.x + bodyBox.width,
+                    bodyBox.y,
+                    ATTACK_REACH * 2,
+                    bodyBox.height
+            );
+            default -> bodyBox;
+        };
+    }
+
+    private int checkAttackMonster(Rectangle attackWorldBox) {
+        synchronized (gp.monsterLock) {
+            for (int i = 0; i < gp.monster.length; i++) {
+                if (gp.monster[i] != null) {
+                    Rectangle monsterBox = new Rectangle(
+                            gp.monster[i].worldX + gp.monster[i].solidArea.x,
+                            gp.monster[i].worldY + gp.monster[i].solidArea.y,
+                            gp.monster[i].solidArea.width,
+                            gp.monster[i].solidArea.height
+                    );
+
+                    if (attackWorldBox.intersects(monsterBox)) {
+                        return i;
+                    }
+                }
+            }
         }
-        else {
+
+        return 999;
+    }
+
+    public void update() {
+
+        if (attacking) {
+            attacking();
+        } else {
 
             // CHECK NPC COLLISION
             collisionOn = false;
@@ -190,9 +274,9 @@ public class Player extends Entity{
             }
         }
 
-        if (invincible){
+        if (invincible) {
             invincibleCounter++;
-            if(invincibleCounter > 120){
+            if (invincibleCounter > 60) {
                 invincible = false;
                 invincibleCounter = 0;
             }
@@ -214,30 +298,8 @@ public class Player extends Entity{
         if (spriteCounter > 20 && spriteCounter <= 30) {
             spriteNum = 2;
 
-            // Save current worldX, worldY, solidArea
-            int currentWorldX = worldX;
-            int currentWorldY = worldY;
-            int solidAreaWidth = solidArea.width;
-            int solidAreaHeight = solidArea.height;
-
-            // Adjust player's worldX/Y for attackArea
-            switch (direction){
-                case "up" : worldY -= attackArea.height; break;
-                case "down" : worldY += attackArea.height; break;
-                case "left" : worldX -= attackArea.width; break;
-                case "right" : worldX += attackArea.width; break;
-            }
-
-            solidArea.width = attackArea.width;
-            solidArea.height = attackArea.height;
-
-            int monsterIndex = gp.cChecker.checkEntity(this, gp.monster);
+            int monsterIndex = checkAttackMonster(getAttackWorldBox());
             damageMonster(monsterIndex);
-
-            worldX = currentWorldX;
-            worldY = currentWorldY;
-            solidArea.width = solidAreaWidth;
-            solidArea.height = solidAreaHeight;
 
         }
 
@@ -245,7 +307,7 @@ public class Player extends Entity{
             spriteNum = 3;
         }
 
-        if (spriteCounter > 40){
+        if (spriteCounter > 40) {
             spriteNum = 0;
             spriteCounter = 0;
             attacking = false;
@@ -259,7 +321,7 @@ public class Player extends Entity{
         }
     }
 
-    public void interactNPC(int i){
+    public void interactNPC(int i) {
         if (gp.keyH.ePressed) {
             if (i != 999) {
                 gp.gameState = gp.dialogueState;
@@ -277,35 +339,41 @@ public class Player extends Entity{
         gp.keyH.ePressed = false;
     }
 
-    public void contactMonster(int i){
+    public void contactMonster(int i) {
 
-        if (i != 999){
+        if (i != 999) {
+            synchronized (gp.monsterLock) {
+                if (gp.monster[i] != null && !invincible && !gp.monster[i].dying) {
+                    gp.playSE(2);
+                    life -= 1;
 
-            if (!invincible && !gp.monster[i].dying) {
-                gp.playSE(2);
-                life -= 1;
-                invincible = true;
+                    if (life <= 0){
+                        gp.triggerGameOver();
+                    }
+                    invincible = true;
+                }
             }
         }
     }
 
     private void damageMonster(int i) {
 
-        if (i != 999 ){
+        if (i != 999) {
+            synchronized (gp.monsterLock) {
+                if (gp.monster[i] != null && !gp.monster[i].invincible) {
 
-            if (!gp.monster[i].invincible){
+                    gp.playSE(1);
 
-                gp.playSE(1);
+                    gp.monster[i].life -= attack;
+                    gp.monster[i].invincible = true;
+                    gp.monster[i].damaged = true;
 
-                gp.monster[i].life -= attack;
-                gp.monster[i].invincible = true;
-                gp.monster[i].damaged = true;
+                    if (gp.monster[i].life <= 0) {
+                        gp.monster[i].dying = true;
+                        gp.monster[i].spriteNum = 0;
+                        gp.monster[i].spriteCounter = 0;
 
-                if (gp.monster[i].life <= 0){
-                    gp.monster[i].dying = true;
-                    gp.monster[i].spriteNum = 0;
-                    gp.monster[i].spriteCounter = 0;
-
+                    }
                 }
             }
         }
@@ -315,7 +383,7 @@ public class Player extends Entity{
         BufferedImage image = null;
 
         if (attacking) {
-            image = switch (direction){
+            image = switch (direction) {
                 case "up" -> attackUp[spriteNum];
                 case "down" -> attackDown[spriteNum];
                 case "left" -> attackLeft[spriteNum];
@@ -323,7 +391,7 @@ public class Player extends Entity{
                 default -> image;
 
             };
-        } else if (isIdle){
+        } else if (isIdle) {
             image = switch (direction) {
                 case "up" -> idleUp[spriteNum];
                 case "down" -> idleDown[spriteNum];
@@ -347,21 +415,30 @@ public class Player extends Entity{
         int x = screenX - (drawSize / 3);
         int y = screenY - (drawSize / 2);
 
-        if(invincible){
-            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0.7f));
+        if (invincible) {
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
         }
 
         g2.drawImage(image, x, y, drawSize, drawSize, null);
 
-        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,1f));
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
 
-//        DEBUG: SHOWS COLLISION BOX
-        g2.setColor(Color.red);
-        g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
+        //DEBUG: SHOWS HIT BOX AND ATTACK BOX
+        if (gp.keyH.showCollisionBox) {
+            Stroke oldStroke = g2.getStroke();
+            g2.setStroke(new BasicStroke(2));
+            g2.setColor(Color.red);
+            g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
 
-//        g2.setFont(new Font("Arial", Font.PLAIN, 26));
-//        g2.setColor(Color.white);
-//        g2.drawString("Invincible: " + invincibleCounter, 10, 400);
+            if (attacking) {
+                Rectangle attackBox = getAttackWorldBox();
+                int attackScreenX = attackBox.x - worldX + screenX;
+                int attackScreenY = attackBox.y - worldY + screenY;
 
+                g2.setColor(Color.green);
+                g2.drawRect(attackScreenX, attackScreenY, attackBox.width, attackBox.height);
+            }
+            g2.setStroke(oldStroke);
         }
     }
+}

@@ -11,6 +11,16 @@ import java.util.Objects;
 import java.util.Random;
 
 public class MON_Slime extends Entity {
+    private static final int CHASE_UPDATE_INTERVAL = 8;
+    private static final int ATTACK_Y_TOLERANCE = 10;
+    private static final int ATTACK_X_TOLERANCE = 10;
+    private static final int SPRITE_SIZE = 32;
+    private static final int BODY_BOTTOM_PIXELS = 24;
+    private static final int MIN_WANDER_DURATION = 60;
+    private static final int MAX_WANDER_DURATION = 120;
+    private final Random random = new Random();
+    private String lastHorizontalDirection = "left";
+    private int wanderTimer = 0;
 
     public MON_Slime(GamePanel gp) {
         super(gp);
@@ -130,50 +140,91 @@ public class MON_Slime extends Entity {
     public void setAction() {
         actionLockCounter++;
 
-        // Re-think direction every 30 frames
-        if (actionLockCounter >= 20) {
+        int slimeCenterX = getSlimeCenterX();
+        int playerCenterX = getPlayerCenterX();
+        int slimeDrawBottomY = getSlimeDrawBottomY();
+        int playerDrawBottomY = getPlayerDrawBottomY();
 
-            // Calculate distance to player
-            int xDistance = Math.abs(worldX - gp.player.worldX);
-            int yDistance = Math.abs(worldY - gp.player.worldY);
-            int tileDistance = (xDistance + yDistance) / gp.TILE_SIZE;
+        // Calculate distance to player
+        int xDifference = playerCenterX - slimeCenterX;
+        int yDifference = playerDrawBottomY - slimeDrawBottomY;
+        int xDistance = Math.abs(xDifference);
+        int yDistance = Math.abs(yDifference);
+        int tileDistance = (xDistance + yDistance) / gp.TILE_SIZE;
 
-            // 1. CHASING STATE
-            if (tileDistance < 6) {
-                // Move towards player
-                if (xDistance > yDistance) {
-                    if (worldX < gp.player.worldX) {
-                        direction = "right";
-                    } else if (worldX > gp.player.worldX) {
-                        direction = "left";
-                    }
+        // 1. WANDER STATE
+        if (tileDistance >= 6) {
+            if (wanderTimer <= 0 || collisionOn) {
+                int i = random.nextInt(100) + 1;
+                if (i <= 25) {
+                    direction = "up";
+                } else if (i <= 50) {
+                    direction = "down";
+                } else if (i <= 75) {
+                    direction = "left";
                 } else {
-                    if (worldY < gp.player.worldY) {
-                        direction = "down";
-                    } else if (worldY > gp.player.worldY) {
-                        direction = "up";
-                    }
+                    direction = "right";
                 }
+                wanderTimer = MIN_WANDER_DURATION + random.nextInt(MAX_WANDER_DURATION - MIN_WANDER_DURATION + 1);
+            }
+            wanderTimer--;
+
+            if (direction.equals("left") || direction.equals("right")) {
+                lastHorizontalDirection = direction;
             }
 
-            // 2. WANDERING STATE
-            else {
-                actionLockCounter++;
-                if (actionLockCounter == 120) {
-                    Random random = new Random();
-                    int i = random.nextInt(125) + 1;
-                    if (i <= 25) {
-                        direction = "up";
-                    } else if (i <= 50) {
-                        direction = "down";
-                    } else if (i <= 75) {
-                        direction = "left";
-                    } else if (i <= 100) {
-                        direction = "right";
-                    }
-                }
+            actionLockCounter = 0;
+            return;
+        }
+
+        wanderTimer = 0;
+        actionLockCounter++;
+
+        // Re-think direction every 8 frames
+        if (actionLockCounter >= CHASE_UPDATE_INTERVAL) {
+            if (yDistance <= ATTACK_Y_TOLERANCE) {
+                direction = getHorizontalDirection(xDifference);
+            } else if (xDistance > ATTACK_X_TOLERANCE) {
+                direction = getHorizontalDirection(xDifference);
+            } else {
+                direction = yDifference > 0 ? "down" : "up";
+            }
+            if (direction.equals("left") || direction.equals("right")) {
+                lastHorizontalDirection = direction;
             }
             actionLockCounter = 0;
+
         }
+    }
+
+    //HELPER FUNCTIONS
+    private String getHorizontalDirection(int xDifference) {
+        if (xDifference > ATTACK_X_TOLERANCE) {
+            return "right";
+        }
+        if (xDifference < -ATTACK_X_TOLERANCE) {
+            return "left";
+        }
+        return lastHorizontalDirection;
+    }
+
+    private int getSlimeCenterX() {
+        int drawSize = (int)(gp.TILE_SIZE * sizeScale);
+        return worldX + drawSize / 2;
+    }
+
+    private int getSlimeDrawBottomY() {
+        int drawSize = (int)(gp.TILE_SIZE * sizeScale);
+        double drawScale = (double) drawSize / SPRITE_SIZE;
+        int drawOffsetY = -(drawSize / 4);
+        return worldY + drawOffsetY + (int) Math.round(BODY_BOTTOM_PIXELS * drawScale);
+    }
+
+    private int getPlayerCenterX() {
+        return gp.player.worldX + gp.player.solidAreaDefaultX + gp.player.solidArea.width / 2;
+    }
+
+    private int getPlayerDrawBottomY() {
+        return gp.player.worldY + gp.player.solidAreaDefaultY + gp.player.solidArea.height;
     }
 }

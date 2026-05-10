@@ -7,7 +7,9 @@ public class KeyHandler implements KeyListener {
     GamePanel gp;
     public boolean upPressed, downPressed, leftPressed, rightPressed, ePressed;
     //DEBUG
-    boolean checkDrawTime = false;
+    public boolean checkDrawTime = false;
+    public boolean checkPlayTime = false;
+    public boolean showCollisionBox = false;
 
 
     public KeyHandler(GamePanel gp){
@@ -75,15 +77,6 @@ public class KeyHandler implements KeyListener {
             if (code == KeyEvent.VK_P) {
                 gp.gameState = gp.pauseState;
             }
-
-
-
-            //DEBUG
-            if (code == KeyEvent.VK_T) {
-                checkDrawTime = true;
-            } else if (checkDrawTime) {
-                checkDrawTime = false;
-            }
         }
 
         //PAUSE STATE
@@ -104,6 +97,24 @@ public class KeyHandler implements KeyListener {
             if (code == KeyEvent.VK_ENTER){
                 gp.gameState = gp.playState;
             }
+        }
+
+        else if (gp.gameState == gp.gameOverState){
+
+            if (code == KeyEvent.VK_ENTER && gp.isGameOverPromptReady()){
+                gp.returnToTileScreen();
+            }
+        }
+
+        //DEBUG
+        if (code == KeyEvent.VK_T) {
+            checkDrawTime = !checkDrawTime; // Toggles draw time
+        }
+        if (code == KeyEvent.VK_L) {
+            checkPlayTime = !checkPlayTime; // Toggles play time
+        }
+        if (code == KeyEvent.VK_O) {
+            showCollisionBox = !showCollisionBox; // Toggles collision boxes
         }
     }
 
@@ -127,5 +138,13 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_D){
             rightPressed = false;
         }
+    }
+
+    public void resetMovementKeys() {
+        upPressed = false;
+        downPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+        ePressed = false;
     }
 }
