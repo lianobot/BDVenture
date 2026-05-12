@@ -10,7 +10,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class Sound implements Runnable{
     private Clip clip;
-    private Clip musicClip;
+    private Clip MusicClip;
     URL[] soundURL = new URL[30] ;
     private final BlockingQueue<Runnable> soundQueue = new LinkedBlockingQueue<>();
 
@@ -22,7 +22,7 @@ public class Sound implements Runnable{
         soundURL[4]=getClass().getResource("/sound/fanfare.wav") ;
         soundURL[5]=getClass().getResource("/sound/gameover.wav") ;
 
-        Thread soundThread = new Thread(this, "Sound Thread");
+        Thread soundThread = new Thread( this,  "Sound Thread");
         soundThread.setDaemon(true);
         soundThread.start();
     }
@@ -41,17 +41,17 @@ public class Sound implements Runnable{
 
     public void playMusic(int i) {
         soundQueue.offer(() -> {
-            stopClip(musicClip);
-            musicClip = loadClip(i);
-            if (musicClip != null) {
-                musicClip.start();
-                musicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            stopClip(MusicClip );
+            MusicClip = loadClip(i);
+            if (MusicClip != null) {
+                MusicClip.start();
+                MusicClip.loop(Clip.LOOP_CONTINUOUSLY);
             }
         });
     }
 
     public void stopMusic() {
-        soundQueue.offer(() -> stopClip(musicClip));
+        soundQueue.offer(() -> stopClip(MusicClip));
     }
 
     public void playSoundEffect(int i) {

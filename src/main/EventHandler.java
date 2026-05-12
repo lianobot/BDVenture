@@ -52,7 +52,7 @@ public class EventHandler {
 
         //Fix the dialogue Problem
         gp.gameState = gameState;
-        gp.ui.currentDialogue = "You fell into a pit";
-        gp.player.life -= 1;
+        gp.ui.currentDialogue = "You have fallen into a pit";
+        gp.player.life -= 1; //decreases life
     }
 }
