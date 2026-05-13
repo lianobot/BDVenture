@@ -12,15 +12,15 @@ import java.util.Objects;
 public class Player extends Entity {
 
     KeyHandler keyH;
-    public final int screenX;
-    public final int screenY;
-    private static final double DRAW_SCALE = 2.5;
-    private static final int BODY_PIXELS_X = 18;
-    private static final int BODY_PIXELS_Y = 30;
-    private static final int BODY_PIXELS_WIDTH = 13;
-    private static final int BODY_PIXELS_HEIGHT = 13;
-    private static final int ATTACK_REACH = 24;
-    private static final int ATTACK_PADDING = 4;
+     public final int screenX;
+     public final int screenY;
+     private static final double DRAW_SCALE = 2.5;
+     private static final int BODY_PIXELS_X = 18;
+     private static final int BODY_PIXELS_Y = 30;
+     private static final int BODY_PIXELS_WIDTH = 13;
+     private static final int BODY_PIXELS_HEIGHT = 13;
+     private static final int ATTACK_REACH = 24;
+     private static final int ATTACK_PADDING = 4;
 
     // Player Stats
     public int attack = 1;
@@ -70,8 +70,8 @@ public class Player extends Entity {
 
     public void setDefaultValues() {
 
-        worldX = gp.TILE_SIZE * 78;
-        worldY = gp.TILE_SIZE * 63;
+         worldX = gp.TILE_SIZE * 78;
+         worldY = gp.TILE_SIZE * 63;
 
         speed = 4;
         direction = "down";
@@ -91,7 +91,7 @@ public class Player extends Entity {
 
     public void getImage() {
         try {
-            // Read the main 48x48 sprite sheet
+             // Read the main 48x48 sprite sheet
             BufferedImage spriteSheet = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/player/player.png")));
             int size = 48;
 
@@ -187,7 +187,7 @@ public class Player extends Entity {
     }
 
     private int checkAttackMonster(Rectangle attackWorldBox) {
-        synchronized (gp.monsterLock) {
+          synchronized (gp.monsterLock) {
             for (int i = 0; i < gp.monster.length; i++) {
                 if (gp.monster[i] != null) {
                     Rectangle monsterBox = new Rectangle(

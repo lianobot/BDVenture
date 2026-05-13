@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.Random;
 
 public class MON_Slime extends Entity {
+
+
     private static final int CHASE_UPDATE_INTERVAL = 8;
     private static final int ATTACK_Y_TOLERANCE = 10;
     private static final int ATTACK_X_TOLERANCE = 10;
@@ -23,6 +25,7 @@ public class MON_Slime extends Entity {
     private int wanderTimer = 0;
 
     public MON_Slime(GamePanel gp) {
+
         super(gp);
 
         //MONSTER STATS
@@ -74,6 +77,7 @@ public class MON_Slime extends Entity {
     }
 
     public void getImage(){
+
         try {
             // Read the main 48x48 sprite sheet
             BufferedImage spriteSheet = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/monster/slime.png")));
@@ -129,6 +133,7 @@ public class MON_Slime extends Entity {
 
     // HELPER FUNCTION : CONVERT RIGHT IMAGE TO LEFT
     public BufferedImage flipImage(BufferedImage img) {
+
         BufferedImage flipped = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = flipped.createGraphics();
         g.drawImage(img, img.getWidth(), 0, -img.getWidth(), img.getHeight(), null);
@@ -138,6 +143,7 @@ public class MON_Slime extends Entity {
 
     @Override
     public void setAction() {
+
         actionLockCounter++;
 
         int slimeCenterX = getSlimeCenterX();
@@ -199,6 +205,7 @@ public class MON_Slime extends Entity {
 
     //HELPER FUNCTIONS
     private String getHorizontalDirection(int xDifference) {
+
         if (xDifference > ATTACK_X_TOLERANCE) {
             return "right";
         }
@@ -209,11 +216,13 @@ public class MON_Slime extends Entity {
     }
 
     private int getSlimeCenterX() {
+
         int drawSize = (int)(gp.TILE_SIZE * sizeScale);
         return worldX + drawSize / 2;
     }
 
     private int getSlimeDrawBottomY() {
+
         int drawSize = (int)(gp.TILE_SIZE * sizeScale);
         double drawScale = (double) drawSize / SPRITE_SIZE;
         int drawOffsetY = -(drawSize / 4);
@@ -221,10 +230,12 @@ public class MON_Slime extends Entity {
     }
 
     private int getPlayerCenterX() {
+
         return gp.player.worldX + gp.player.solidAreaDefaultX + gp.player.solidArea.width / 2;
     }
 
     private int getPlayerDrawBottomY() {
+
         return gp.player.worldY + gp.player.solidAreaDefaultY + gp.player.solidArea.height;
     }
 }

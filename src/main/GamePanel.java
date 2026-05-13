@@ -12,15 +12,15 @@ import java.util.Arrays;
 public class GamePanel extends JPanel implements Runnable {
 
     //SCREEN SETTINGS
-    final int ORIGINAL_TILE_SIZE = 16; // 16x16 tile
-    final int SCALE = 3;
+     final int ORIGINAL_TILE_SIZE = 16; // 16x16 tile
+     final int SCALE = 3;
 
-    public final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE; // 48x48 tile
+     public final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE; // 48x48 tile
 
-    public final double MAX_SCREEN_COLUMN = 27;
-    public final double MAX_SCREEN_ROW = 15;
-    public final int SCREEN_WIDTH = (int) (TILE_SIZE * MAX_SCREEN_COLUMN); // 1440 pixels
-    public final int SCREEN_HEIGHT = (int) (TILE_SIZE * MAX_SCREEN_ROW); // 810 pixels
+     public final double MAX_SCREEN_COLUMN = 27;
+     public final double MAX_SCREEN_ROW = 15;
+     public final int SCREEN_WIDTH = (int) (TILE_SIZE * MAX_SCREEN_COLUMN); // 1440 pixels
+     public final int SCREEN_HEIGHT = (int) (TILE_SIZE * MAX_SCREEN_ROW); // 810 pixels
 
     //WORLD SETTINGS
     public final int MAX_WORLD_COL = 128;
@@ -177,7 +177,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     //MONSTER
     private void updateMonsters() {
-        synchronized (monsterLock) {
+         synchronized (monsterLock) {
             for (int i = 0; i < monster.length; i++) {
                 if (monster[i] != null) {
                     if (monster[i].alive) {

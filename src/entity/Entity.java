@@ -88,14 +88,17 @@ public abstract class Entity {
 
     public void update() {
 
+
         // 1. MONSTER Death Guard
         if (dying) {
             dyingAnimation();
             return;
         }
 
+
         // 2. Entity Ai
         setAction();
+
 
         // 3. Entity Collision Checks
         collisionOn = false;
@@ -103,6 +106,7 @@ public abstract class Entity {
         gp.cChecker.checkObject(this, false);
         gp.cChecker.checkEntity(this, gp.npc);
         gp.cChecker.checkEntity(this, gp.monster);
+
 
         // Check Entity contact with player
         boolean contactPlayer = gp.cChecker.checkPlayer(this);
@@ -154,6 +158,7 @@ public abstract class Entity {
 
     // Helper to get dying animation
     private void dyingAnimation() {
+
         dyingCounter++;
 
         // Remove hitbox
