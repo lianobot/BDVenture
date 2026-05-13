@@ -42,20 +42,20 @@ public class MON_Slime extends Entity {
         idleLeft = new BufferedImage[4];
         idleRight = new BufferedImage[4];
 
-        walkUp = new BufferedImage[6];
-        walkDown = new BufferedImage[6];
+        walkUp   =   new BufferedImage[6];
+        walkDown =  new BufferedImage[6];
         walkLeft = new BufferedImage[6];
-        walkRight = new BufferedImage[6];
+        walkRight= new BufferedImage[6];
 
-        attackUp = new BufferedImage[4];
-        attackDown = new BufferedImage[4];
-        attackLeft = new BufferedImage[4];
+        attackUp =    new BufferedImage[4];
+        attackDown =  new BufferedImage[4];
+        attackLeft =  new BufferedImage[4];
         attackRight = new BufferedImage[4];
 
-        damageUp = new BufferedImage[3];
+        damageUp =   new   BufferedImage[3];
         damageDown = new BufferedImage[3];
         damageLeft = new BufferedImage[3];
-        damageRight = new BufferedImage[3];
+        damageRight =new BufferedImage[3];
 
         dieUp = new BufferedImage[5];
         dieDown = new BufferedImage[5];
