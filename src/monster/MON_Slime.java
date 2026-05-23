@@ -13,16 +13,16 @@ import java.util.Random;
 public class MON_Slime extends Entity {
 
 
-    private static final int CHASE_UPDATE_INTERVAL = 8;
-    private static final int ATTACK_Y_TOLERANCE = 10;
-    private static final int ATTACK_X_TOLERANCE = 10;
-    private static final int SPRITE_SIZE = 32;
-    private static final int BODY_BOTTOM_PIXELS = 24;
-    private static final int MIN_WANDER_DURATION = 60;
-    private static final int MAX_WANDER_DURATION = 120;
+    private static final int CHASE_UPDATE_INTERVAL = 8; // How often (in frames) the slime re-calculates its path to the player
+    private static final int ATTACK_Y_TOLERANCE = 10;   // Margin of error for aligning vertically before attacking
+    private static final int ATTACK_X_TOLERANCE = 10;   // Margin of error for aligning horizontally before attacking
+    private static final int SPRITE_SIZE = 32;          // The base resolution of a single sprite frame (32x32)
+    private static final int BODY_BOTTOM_PIXELS = 24;   // Y-coordinate within the sprite representing the slime's "feet"
+    private static final int MIN_WANDER_DURATION = 60;  // Minimum frames to move in one direction during wander state
+    private static final int MAX_WANDER_DURATION = 120; // Maximum frames to move in one direction during wander state
     private final Random random = new Random();
-    private String lastHorizontalDirection = "left";
-    private int wanderTimer = 0;
+    private String lastHorizontalDirection = "left";    // Remembers the last side-facing direction for sprite flipping
+    private int wanderTimer = 0;                        // Countdown timer to decide when to change direction while wandering
 
     public MON_Slime(GamePanel gp) {
 
@@ -157,6 +157,7 @@ public class MON_Slime extends Entity {
         int xDistance = Math.abs(xDifference);
         int yDistance = Math.abs(yDifference);
         int tileDistance = (xDistance + yDistance) / gp.TILE_SIZE;
+        telegraphActive = tileDistance < 6;
 
         // 1. WANDER STATE
         if (tileDistance >= 6) {

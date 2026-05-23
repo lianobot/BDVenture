@@ -13,6 +13,8 @@ public class Sound implements Runnable{
     private Clip MusicClip;
     URL[] soundURL = new URL[30] ;
     private final BlockingQueue<Runnable> soundQueue = new LinkedBlockingQueue<>();
+    private volatile int musicVolume = UI.SLIDER_TICK_COUNT;
+    private volatile int soundEffectVolume = UI.SLIDER_TICK_COUNT;
 
     public Sound(){
         soundURL[0]=getClass().getResource("/sound/menuet.wav") ;
@@ -42,7 +44,7 @@ public class Sound implements Runnable{
     public void playMusic(int i) {
         soundQueue.offer(() -> {
             stopClip(MusicClip );
-            MusicClip = loadClip(i);
+            MusicClip = loadClip(i, musicVolume);
             if (MusicClip != null) {
                 MusicClip.start();
                 MusicClip.loop(Clip.LOOP_CONTINUOUSLY);
@@ -56,7 +58,7 @@ public class Sound implements Runnable{
 
     public void playSoundEffect(int i) {
         soundQueue.offer(() -> {
-            Clip soundEffect = loadClip(i);
+            Clip soundEffect = loadClip(i, soundEffectVolume);
             if (soundEffect != null) {
                 soundEffect.start();
             }
@@ -65,24 +67,55 @@ public class Sound implements Runnable{
 
 
     public void setFile(int i){
-        soundQueue.offer(() -> clip = loadClip(i));
+        soundQueue.offer(() -> clip = loadClip(i, soundEffectVolume));
     }
 
-    private Clip loadClip(int i) {
+    public void setMusicVolume(int volume) {
+        musicVolume = clampVolume(volume);
+        soundQueue.offer(() -> applyVolume(MusicClip, musicVolume));
+    }
+
+    public void setSoundEffectVolume(int volume) {
+        soundEffectVolume = clampVolume(volume);
+        soundQueue.offer(() -> applyVolume(clip, soundEffectVolume));
+    }
+
+    private Clip loadClip(int i, int volume) {
         try{
 
             AudioInputStream ais = AudioSystem.getAudioInputStream(soundURL[i]);
             Clip newClip = AudioSystem.getClip();
             newClip.open(ais);
-
-            FloatControl gainControl = (FloatControl) newClip.getControl(FloatControl.Type.MASTER_GAIN);
-            gainControl.setValue(-13.0f);
+            applyVolume(newClip, volume);
             return newClip;
 
         } catch (Exception e){
             e.printStackTrace();
             return null;
         }
+    }
+
+    private void applyVolume(Clip targetClip, int volume) {
+        if (targetClip == null || !targetClip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+            return;
+        }
+
+        FloatControl gainControl = (FloatControl) targetClip.getControl(FloatControl.Type.MASTER_GAIN);
+        gainControl.setValue(volumeToDecibels(volume));
+    }
+
+    private int clampVolume(int volume) {
+        return Math.max(0, Math.min(UI.SLIDER_TICK_COUNT, volume));
+    }
+
+    private float volumeToDecibels(int volume) {
+        if (volume <= 0) {
+            return -80.0f;
+        }
+
+        // UI Settings Buttons.png exposes nine green slider ticks; full volume preserves the old +2 dB mix.
+        float normalized = (float) volume / UI.SLIDER_TICK_COUNT;
+        return -30.0f + normalized * 32.0f;
     }
 
     private void stopClip(Clip clipToStop) {

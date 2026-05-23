@@ -5,7 +5,7 @@ import java.awt.event.KeyListener;
 
 public class KeyHandler implements KeyListener {
     GamePanel gp;
-    public boolean upPressed, downPressed, leftPressed, rightPressed, ePressed;
+    public boolean upPressed, downPressed, leftPressed, rightPressed, ePressed, blockPressed, dodgePressed, sprintPressed;
     //DEBUG
     public boolean checkDrawTime = false;
     public boolean checkPlayTime = false;
@@ -27,29 +27,20 @@ public class KeyHandler implements KeyListener {
 
         //TITLE STATE
         if (gp.gameState == gp.titleState){
-            if (code == KeyEvent.VK_W) {
+            if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
                 if (gp.ui.commandNum != 0) {
                     gp.ui.commandNum--;
                 }
             }
 
-            if (code == KeyEvent.VK_S) {
+            if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
                 if (gp.ui.commandNum != 2) {
                     gp.ui.commandNum++;
                 }
             }
 
             if (code == KeyEvent.VK_ENTER){
-                if (gp.ui.commandNum == 0) {
-                    gp.gameState = gp.playState;
-                    gp.playMusic(0);
-                }
-                else if (gp.ui.commandNum == 1){
-                    //add loading option
-                }
-                else if (gp.ui.commandNum == 2){
-                    System.exit(0);
-                }
+                gp.selectTitleCommand(gp.ui.commandNum);
             }
         }
         //PLAY STATE
@@ -74,6 +65,19 @@ public class KeyHandler implements KeyListener {
                 ePressed = true;
             }
 
+            // ACTIVE SHIELD BLOCKING: hold Shift to enter the player's defensive stance.
+            if (code == KeyEvent.VK_SHIFT) {
+                blockPressed = true;
+            }
+
+            if (code == KeyEvent.VK_SPACE) {
+                dodgePressed = true;
+            }
+
+            if (code == KeyEvent.VK_CONTROL) {
+                sprintPressed = true;
+            }
+
             if (code == KeyEvent.VK_P) {
                 gp.gameState = gp.pauseState;
             }
@@ -87,15 +91,63 @@ public class KeyHandler implements KeyListener {
             }
         }
 
+        //SETTINGS STATE
+        else if (gp.gameState == gp.settingsState){
+
+            if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
+                if (gp.ui.settingsCommandNum != 0) {
+                    gp.ui.settingsCommandNum--;
+                }
+            }
+
+            if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
+                if (gp.ui.settingsCommandNum != UI.SETTINGS_BACK) {
+                    gp.ui.settingsCommandNum++;
+                }
+            }
+
+            if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
+                if (gp.ui.settingsCommandNum == UI.SETTINGS_MUSIC) {
+                    gp.changeMusicVolume(-1);
+                } else if (gp.ui.settingsCommandNum == UI.SETTINGS_SFX) {
+                    gp.changeSoundEffectVolume(-1);
+                }
+            }
+
+            if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
+                if (gp.ui.settingsCommandNum == UI.SETTINGS_MUSIC) {
+                    gp.changeMusicVolume(1);
+                } else if (gp.ui.settingsCommandNum == UI.SETTINGS_SFX) {
+                    gp.changeSoundEffectVolume(1);
+                }
+            }
+
+            if (code == KeyEvent.VK_ENTER && gp.ui.settingsCommandNum == UI.SETTINGS_BACK) {
+                gp.returnToTitleScreen();
+            }
+
+            if (code == KeyEvent.VK_ESCAPE) {
+                gp.returnToTitleScreen();
+            }
+        }
+
         //DIALOGUE STATE
         else if (gp.gameState == gp.dialogueState){
 
             if (code == KeyEvent.VK_E) {
-                gp.npc[gp.player.dialogueIndex].speak();
+                if (gp.ui.isDialogueTyping()) {
+                    gp.ui.finishDialogueLine();
+                } else {
+                    gp.npc[gp.player.dialogueIndex].speak();
+                }
             }
 
             if (code == KeyEvent.VK_ENTER){
-                gp.gameState = gp.playState;
+                if (gp.ui.isDialogueTyping()) {
+                    gp.ui.finishDialogueLine();
+                } else {
+                    gp.gameState = gp.playState;
+                }
             }
         }
 
@@ -138,6 +190,18 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_D){
             rightPressed = false;
         }
+
+        if (code == KeyEvent.VK_SHIFT){
+            blockPressed = false;
+        }
+
+        if (code == KeyEvent.VK_SPACE){
+            dodgePressed = false;
+        }
+
+        if (code == KeyEvent.VK_CONTROL){
+            sprintPressed = false;
+        }
     }
 
     public void resetMovementKeys() {
@@ -146,5 +210,8 @@ public class KeyHandler implements KeyListener {
         leftPressed = false;
         rightPressed = false;
         ePressed = false;
+        blockPressed = false;
+        dodgePressed = false;
+        sprintPressed = false;
     }
 }

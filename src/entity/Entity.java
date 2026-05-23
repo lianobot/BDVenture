@@ -49,6 +49,8 @@ public abstract class Entity {
     public boolean damaged = false;       // Damaged state
     public boolean alive = true;          // Tracks if entity exists
     public int dyingCounter = 0;          // Timer for the death animation
+    public boolean telegraphActive = false; // Persistent warning while an enemy is locked on
+    public int staggerCounter = 0;        // Brief pause after taking a hit
     public int attack = 0;
     public int defense = 0;
 
@@ -66,7 +68,7 @@ public abstract class Entity {
             dialogueIndex = 0;
             gp.gameState = gp.playState;
         } else {
-            gp.ui.currentDialogue = dialogues[dialogueIndex];
+            gp.ui.setDialogue(dialogues[dialogueIndex]);
             dialogueIndex++;
         }
 
@@ -97,6 +99,13 @@ public abstract class Entity {
 
 
         // 2. Entity Ai
+        if (staggerCounter > 0) {
+            staggerCounter--;
+            updateAnimationFrame();
+            updateInvincibilityFrame();
+            return;
+        }
+
         setAction();
 
 
@@ -113,12 +122,7 @@ public abstract class Entity {
 
         // Player takes damage if contact and MONSTER not dying
         if (this.type == 2 && contactPlayer && !dying) {
-            if (!gp.player.invincible) {
-                //player gets damaged
-                gp.playSE(2);
-                gp.player.life -= 1;
-                gp.player.invincible = true;
-            }
+            gp.player.receiveMonsterDamage(this);
         }
 
         // 4. Entity Movement
@@ -132,6 +136,14 @@ public abstract class Entity {
         }
 
         // 5. Entity Animation
+        updateAnimationFrame();
+
+        // 6. Entity Invincibility
+        updateInvincibilityFrame();
+
+    }
+
+    private void updateAnimationFrame() {
         spriteCounter++;
         if (spriteCounter >= 12) {
             spriteNum++;
@@ -142,8 +154,9 @@ public abstract class Entity {
             }
             spriteCounter = 0;
         }
+    }
 
-        // 6. Entity Invincibility
+    private void updateInvincibilityFrame() {
         if (invincible) {
             invincibleCounter++;
             if (invincibleCounter > 45) {
@@ -152,7 +165,6 @@ public abstract class Entity {
                 damaged = false;
             }
         }
-
     }
 
 
@@ -160,6 +172,7 @@ public abstract class Entity {
     private void dyingAnimation() {
 
         dyingCounter++;
+        telegraphActive = false;
 
         // Remove hitbox
         solidArea.width = 0;
@@ -210,12 +223,21 @@ public abstract class Entity {
                 int x = screenX;
                 int y = screenY - (drawSize / 4);
 
+                if (telegraphActive) {
+                    g2.setColor(new Color(255, 68, 56, 115));
+                    g2.fillOval(x + drawSize / 5, y + drawSize / 2, drawSize * 3 / 5, drawSize / 3);
+                }
+
                 if (invincible) {
                     g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
                 }
                 g2.drawImage(image, x, y, (int) (gp.TILE_SIZE * sizeScale), (int) (gp.TILE_SIZE * sizeScale), null);
 
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+
+                if (type == 2 && maxLife > 0 && (life < maxLife || telegraphActive || damaged)) {
+                    drawHealthBar(g2, x, y, drawSize);
+                }
             }
 
 
@@ -228,6 +250,21 @@ public abstract class Entity {
             g2.drawRect(screenX + solidAreaDefaultX, screenY + solidAreaDefaultY, solidArea.width, solidArea.height);
             g2.setStroke(oldStroke);
         }
+    }
+
+    private void drawHealthBar(Graphics2D g2, int x, int y, int drawSize) {
+        int barWidth = Math.max(28, drawSize / 2);
+        int barHeight = 5;
+        int barX = x + drawSize / 2 - barWidth / 2;
+        int barY = y - 8;
+        int fillWidth = Math.max(0, Math.round(barWidth * (life / (float) maxLife)));
+
+        g2.setColor(new Color(40, 31, 34, 220));
+        g2.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+        g2.setColor(new Color(95, 40, 43));
+        g2.fillRect(barX, barY, barWidth, barHeight);
+        g2.setColor(new Color(220, 45, 50));
+        g2.fillRect(barX, barY, fillWidth, barHeight);
     }
 
     // Helper to get the correct array for the current direction

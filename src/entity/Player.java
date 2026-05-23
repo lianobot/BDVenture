@@ -21,13 +21,41 @@ public class Player extends Entity {
      private static final int BODY_PIXELS_HEIGHT = 13;
      private static final int ATTACK_REACH = 24;
      private static final int ATTACK_PADDING = 4;
+     private static final int MIN_KNOCKBACK_PIXELS = 20;
+     private static final int MAX_KNOCKBACK_PIXELS = 30;
+     private static final int KNOCKBACK_STEP_PIXELS = 4;
+     private static final int BLOCK_DEFLECT_COOLDOWN = 20;
+     private static final int DODGE_SPEED = 9;
+     private static final int DODGE_DURATION = 14;
+     private static final int DODGE_STAMINA_COST = 30;
+     private static final int STAMINA_REGEN_DELAY = 18;
+     private static final int BLOCK_STAMINA_DRAIN_INTERVAL = 12;
+     private static final int BLOCK_STAMINA_DRAIN = 1;
+     private static final int MONSTER_STAGGER_FRAMES = 60;
+     private static final int SPRINT_STAMINA_DRAIN_INTERVAL = 8;
+     private static final int SPRINT_STAMINA_DRAIN = 1;
+     private static final int COMBO_WINDOW_FRAMES = 55;
+     private static final int MAX_COMBO_STEP = 2;
+     private static final int CONTACT_RECOIL_PIXELS = 18;
 
     // Player Stats
     public int attack = 1;
     public int defense = 0;
+    public int maxStamina = 100;
+    public int stamina = maxStamina;
 
     // Player State tracker
     public boolean isIdle = true;
+    public volatile boolean isBlocking = false;
+    public boolean isDodging = false;
+    public int nearbyNpcIndex = 999;
+    private volatile int blockDeflectCounter = 0;
+    private int blockDrainCounter = 0;
+    private int sprintDrainCounter = 0;
+    private int dodgeCounter = 0;
+    private int staminaRegenCounter = 0;
+    private int comboStep = 0;
+    private int comboTimer = 0;
 
     // Arrays to hold our 6-frame animations
     public BufferedImage[] idleUp = new BufferedImage[6];
@@ -81,6 +109,17 @@ public class Player extends Entity {
         life = maxLife;
 
         isIdle = true;
+        isBlocking = false;
+        isDodging = false;
+        nearbyNpcIndex = 999;
+        blockDeflectCounter = 0;
+        blockDrainCounter = 0;
+        sprintDrainCounter = 0;
+        dodgeCounter = 0;
+        stamina = maxStamina;
+        staminaRegenCounter = 0;
+        comboStep = 0;
+        comboTimer = 0;
         attacking = false;
         invincible = false;
         invincibleCounter = 0;
@@ -208,15 +247,36 @@ public class Player extends Entity {
     }
 
     public void update() {
+        if (keyH.dodgePressed) {
+            tryStartDodge();
+            keyH.dodgePressed = false;
+        }
+
+        if (isDodging) {
+            updateDodge();
+            updateAnimationTicker();
+            updateInvincibilityTimer();
+            return;
+        }
+
+        isBlocking = keyH.blockPressed;
+        if (isBlocking && attacking) {
+            attacking = false;
+            spriteCounter = 0;
+            spriteNum = 0;
+        }
 
         if (attacking) {
+            isBlocking = false;
             attacking();
         } else {
+            // ACTIVE SHIELD BLOCKING: Shift toggles the defensive stance while gameplay is active.
+            isBlocking = keyH.blockPressed;
 
             // CHECK NPC COLLISION
             collisionOn = false;
-            int npcIndex = gp.cChecker.checkEntity(this, gp.npc);
-            interactNPC(npcIndex);
+            nearbyNpcIndex = gp.cChecker.checkEntity(this, gp.npc);
+            interactNPC(nearbyNpcIndex);
 
             if (keyH.upPressed || keyH.downPressed || keyH.leftPressed || keyH.rightPressed) {
                 isIdle = false;
@@ -229,12 +289,27 @@ public class Player extends Entity {
                 // Normalize Speed
                 double currentSpeed = speed;
 
+                // ACTIVE SHIELD BLOCKING: blocking trades offense for defense by halving movement speed.
+                if (isBlocking) {
+                    currentSpeed *= 0.5;
+                }
+
+                if (isSprinting()) {
+                    currentSpeed *= 1.5;
+                    drainSprintStamina();
+                } else {
+                    sprintDrainCounter = 0;
+                }
+
                 // Check if moving diagonally
                 boolean isDiagonal = (keyH.upPressed || keyH.downPressed) && (keyH.leftPressed || keyH.rightPressed);
 
                 if (isDiagonal) {
                     currentSpeed *= 0.85;
                 }
+
+                int oldSpeed = speed;
+                speed = Math.max(1, (int) Math.ceil(currentSpeed));
 
                 // CHECK TILE COLLISION
                 gp.cChecker.checkTile(this);
@@ -250,6 +325,8 @@ public class Player extends Entity {
                 // CHECK EVENT
                 gp.eventHandler.checkEvent();
 
+                speed = oldSpeed;
+
                 // IF COLLISION FALSE, PLAYER MAY MOVE
                 if (!collisionOn && !keyH.ePressed) {
                     if (keyH.upPressed) { worldY -= (int)currentSpeed; }
@@ -262,7 +339,17 @@ public class Player extends Entity {
             }
         }
 
-        // ANIMATION TICKER
+        updateAnimationTicker();
+        updateInvincibilityTimer();
+        updateStaminaRegen();
+        updateComboTimer();
+
+        if (blockDeflectCounter > 0) {
+            blockDeflectCounter--;
+        }
+    }
+
+    private void updateAnimationTicker() {
         spriteCounter++;
         if (!attacking) {
             if (spriteCounter >= 13) {
@@ -273,7 +360,9 @@ public class Player extends Entity {
                 spriteCounter = 0;
             }
         }
+    }
 
+    private void updateInvincibilityTimer() {
         if (invincible) {
             invincibleCounter++;
             if (invincibleCounter > 60) {
@@ -281,6 +370,118 @@ public class Player extends Entity {
                 invincibleCounter = 0;
             }
         }
+    }
+
+    private void updateStaminaRegen() {
+        if (isBlocking) {
+            blockDrainCounter++;
+            if (blockDrainCounter >= BLOCK_STAMINA_DRAIN_INTERVAL) {
+                stamina = Math.max(0, stamina - BLOCK_STAMINA_DRAIN);
+                blockDrainCounter = 0;
+            }
+
+            if (stamina == 0) {
+                isBlocking = false;
+                keyH.blockPressed = false;
+                gp.effects.onGuardBreak(worldX, worldY);
+            }
+            staminaRegenCounter = 0;
+            return;
+        }
+
+        blockDrainCounter = 0;
+        if (attacking || isDodging || isSprinting() || stamina >= maxStamina) {
+            staminaRegenCounter = 0;
+            return;
+        }
+
+        staminaRegenCounter++;
+        if (staminaRegenCounter >= STAMINA_REGEN_DELAY) {
+            stamina = Math.min(maxStamina, stamina + 2);
+            staminaRegenCounter = 0;
+        }
+    }
+
+    public boolean canDodge() {
+        return stamina >= DODGE_STAMINA_COST && !attacking && !isBlocking && !isDodging;
+    }
+
+    public boolean isSprinting() {
+        return keyH.sprintPressed && stamina > 0 && !attacking && !isBlocking && !isDodging;
+    }
+
+    private void drainSprintStamina() {
+        sprintDrainCounter++;
+        if (sprintDrainCounter >= SPRINT_STAMINA_DRAIN_INTERVAL) {
+            stamina = Math.max(0, stamina - SPRINT_STAMINA_DRAIN);
+            sprintDrainCounter = 0;
+        }
+    }
+
+    private void updateComboTimer() {
+        if (comboTimer > 0) {
+            comboTimer--;
+            if (comboTimer == 0) {
+                comboStep = 0;
+            }
+        }
+    }
+
+    private void tryStartDodge() {
+        if (!canDodge()) {
+            return;
+        }
+
+        if (keyH.upPressed) { direction = "up"; }
+        else if (keyH.downPressed) { direction = "down"; }
+        else if (keyH.leftPressed) { direction = "left"; }
+        else if (keyH.rightPressed) { direction = "right"; }
+
+        stamina -= DODGE_STAMINA_COST;
+        staminaRegenCounter = 0;
+        isDodging = true;
+        isBlocking = false;
+        dodgeCounter = DODGE_DURATION;
+        invincible = true;
+        invincibleCounter = 0;
+        isIdle = false;
+    }
+
+    private void updateDodge() {
+        gp.effects.spawnDodgeDust(
+                worldX + solidAreaDefaultX + solidArea.width / 2,
+                worldY + solidAreaDefaultY + solidArea.height
+        );
+        moveInFacingDirection(DODGE_SPEED);
+        dodgeCounter--;
+
+        if (dodgeCounter <= 0) {
+            isDodging = false;
+            invincible = false;
+            invincibleCounter = 0;
+        }
+    }
+
+    private void moveInFacingDirection(int moveSpeed) {
+        int oldSpeed = speed;
+        speed = moveSpeed;
+        collisionOn = false;
+
+        gp.cChecker.checkTile(this);
+        gp.cChecker.checkObject(this, true);
+        gp.cChecker.checkEntity(this, gp.npc);
+        gp.cChecker.checkEntity(this, gp.monster);
+
+        if (!collisionOn) {
+            switch (direction) {
+                case "up" -> worldY -= moveSpeed;
+                case "down" -> worldY += moveSpeed;
+                case "left" -> worldX -= moveSpeed;
+                case "right" -> worldX += moveSpeed;
+            }
+        }
+
+        speed = oldSpeed;
     }
 
     public void attacking() {
@@ -325,11 +526,19 @@ public class Player extends Entity {
         if (gp.keyH.ePressed) {
             if (i != 999) {
                 gp.gameState = gp.dialogueState;
+                gp.player.dialogueIndex = i;
                 gp.npc[i].speak();
             } else {
                 // Only start attack if we aren't already attacking
-                if (!attacking) {
-                    gp.playSE(3);
+                // ACTIVE SHIELD BLOCKING: the player cannot begin an attack while holding block.
+                if (!attacking && !keyH.blockPressed) {
+                    if (comboTimer > 0) {
+                        comboStep = Math.min(MAX_COMBO_STEP, comboStep + 1);
+                    } else {
+                        comboStep = 0;
+                    }
+                    comboTimer = COMBO_WINDOW_FRAMES;
+                    gp.playSE(GamePanel.SE_SWING_WEAPON);
                     attacking = true;
                     spriteCounter = 0; // Reset counter for animation
                     spriteNum = 0;
@@ -344,16 +553,132 @@ public class Player extends Entity {
         if (i != 999) {
             synchronized (gp.monsterLock) {
                 if (gp.monster[i] != null && !invincible && !gp.monster[i].dying) {
-                    gp.playSE(2);
-                    life -= 1;
-
-                    if (life <= 0){
-                        gp.triggerGameOver();
-                    }
-                    invincible = true;
+                    receiveMonsterDamage(gp.monster[i]);
                 }
             }
         }
+    }
+
+    public void receiveMonsterDamage(Entity monster) {
+        if (monster == null || invincible || monster.dying) {
+            return;
+        }
+
+        if (blockMonsterContact(monster)) {
+            return;
+        }
+
+        gp.playSE(GamePanel.SE_PLAYER_HURT);
+        life -= 1;
+        applyContactRecoil(monster);
+
+        if (life <= 0){
+            gp.triggerGameOver();
+        }
+        invincible = true;
+    }
+
+    private void applyContactRecoil(Entity source) {
+        if (source == null) {
+            return;
+        }
+
+        int playerCenterX = worldX + solidAreaDefaultX + solidArea.width / 2;
+        int playerCenterY = worldY + solidAreaDefaultY + solidArea.height / 2;
+        int sourceCenterX = source.worldX + source.solidAreaDefaultX + source.solidArea.width / 2;
+        int sourceCenterY = source.worldY + source.solidAreaDefaultY + source.solidArea.height / 2;
+        int deltaX = playerCenterX - sourceCenterX;
+        int deltaY = playerCenterY - sourceCenterY;
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            pushPlayerWithTileCollision(deltaX >= 0 ? CONTACT_RECOIL_PIXELS : -CONTACT_RECOIL_PIXELS, 0);
+        } else {
+            pushPlayerWithTileCollision(0, deltaY >= 0 ? CONTACT_RECOIL_PIXELS : -CONTACT_RECOIL_PIXELS);
+        }
+    }
+
+    private void pushPlayerWithTileCollision(int deltaX, int deltaY) {
+        int remaining = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+        int xSign = Integer.compare(deltaX, 0);
+        int ySign = Integer.compare(deltaY, 0);
+        String pushDirection = Math.abs(deltaX) > 0 ? (xSign > 0 ? "right" : "left") : (ySign > 0 ? "down" : "up");
+
+        String oldDirection = direction;
+        int oldSpeed = speed;
+        boolean oldCollisionOn = collisionOn;
+
+        while (remaining > 0) {
+            int step = Math.min(KNOCKBACK_STEP_PIXELS, remaining);
+            int stepX = xSign * step;
+            int stepY = ySign * step;
+
+            direction = pushDirection;
+            speed = step;
+            collisionOn = false;
+            gp.cChecker.checkTile(this);
+            if (collisionOn) {
+                break;
+            }
+
+            worldX += stepX;
+            worldY += stepY;
+            remaining -= step;
+        }
+
+        direction = oldDirection;
+        speed = oldSpeed;
+        collisionOn = oldCollisionOn;
+    }
+
+    public boolean blockMonsterContact(Entity monster) {
+        if (!isBlockingHitFromFront(monster)) {
+            return false;
+        }
+
+        // ACTIVE SHIELD BLOCKING: a short cooldown prevents the parry sound from stacking every frame.
+        if (blockDeflectCounter == 0) {
+            gp.playSE(GamePanel.SE_BLOCK_DEFLECT);
+            gp.effects.onBlockDeflect(monster.worldX, monster.worldY);
+            blockDeflectCounter = BLOCK_DEFLECT_COOLDOWN;
+        }
+        return true;
+    }
+
+    public boolean isBlockingHitFromFront(Entity attacker) {
+        if (!isBlocking || attacker == null || attacker.dying) {
+            return false;
+        }
+
+        Rectangle playerBox = getEntityWorldBox(this);
+        Rectangle attackerBox = getEntityWorldBox(attacker);
+
+        int playerCenterX = playerBox.x + playerBox.width / 2;
+        int playerCenterY = playerBox.y + playerBox.height / 2;
+        int attackerCenterX = attackerBox.x + attackerBox.width / 2;
+        int attackerCenterY = attackerBox.y + attackerBox.height / 2;
+
+        // ACTIVE SHIELD BLOCKING: vector from player center to monster center determines the attack side.
+        int deltaX = attackerCenterX - playerCenterX;
+        int deltaY = attackerCenterY - playerCenterY;
+        int sideToleranceX = playerBox.width / 2 + attackerBox.width;
+        int sideToleranceY = playerBox.height / 2 + attackerBox.height;
+
+        return switch (direction) {
+            case "up" -> deltaY <= 0 && Math.abs(deltaX) <= sideToleranceX;
+            case "down" -> deltaY >= 0 && Math.abs(deltaX) <= sideToleranceX;
+            case "left" -> deltaX <= 0 && Math.abs(deltaY) <= sideToleranceY;
+            case "right" -> deltaX >= 0 && Math.abs(deltaY) <= sideToleranceY;
+            default -> false;
+        };
+    }
+
+    private Rectangle getEntityWorldBox(Entity entity) {
+        return new Rectangle(
+                entity.worldX + entity.solidAreaDefaultX,
+                entity.worldY + entity.solidAreaDefaultY,
+                entity.solidArea.width,
+                entity.solidArea.height
+        );
     }
 
     private void damageMonster(int i) {
@@ -362,13 +687,20 @@ public class Player extends Entity {
             synchronized (gp.monsterLock) {
                 if (gp.monster[i] != null && !gp.monster[i].invincible) {
 
-                    gp.playSE(1);
+                    gp.playSE(GamePanel.SE_HIT_MONSTER);
 
-                    gp.monster[i].life -= attack;
+                    int damage = attack + comboStep;
+                    gp.monster[i].life -= damage;
                     gp.monster[i].invincible = true;
                     gp.monster[i].damaged = true;
+                    gp.monster[i].staggerCounter = MONSTER_STAGGER_FRAMES;
+                    gp.effects.onMonsterHit(gp.monster[i].worldX, gp.monster[i].worldY, damage);
+
+                    applyAttackKnockback(gp.monster[i]);
 
                     if (gp.monster[i].life <= 0) {
+                        gp.monstersDefeated++;
+                        gp.effects.onMonsterDefeated(gp.monster[i].worldX, gp.monster[i].worldY);
                         gp.monster[i].dying = true;
                         gp.monster[i].spriteNum = 0;
                         gp.monster[i].spriteCounter = 0;
@@ -377,6 +709,97 @@ public class Player extends Entity {
                 }
             }
         }
+    }
+
+    public int getComboStep() {
+        return comboStep;
+    }
+
+    private void applyAttackKnockback(Entity monster) {
+        int knockbackDistance = Math.min(MAX_KNOCKBACK_PIXELS, MIN_KNOCKBACK_PIXELS + attack * 5);
+        int deltaX = 0;
+        int deltaY = 0;
+
+        // ATTACK KNOCKBACK: direction vector is derived from the player's current facing.
+        switch (direction) {
+            case "up" -> deltaY = -knockbackDistance;
+            case "down" -> deltaY = knockbackDistance;
+            case "left" -> deltaX = -knockbackDistance;
+            case "right" -> deltaX = knockbackDistance;
+        }
+
+        pushEntityWithTileCollision(monster, deltaX, deltaY);
+    }
+
+    private void pushEntityWithTileCollision(Entity entity, int deltaX, int deltaY) {
+        if (deltaX != 0) {
+            pushEntityAxis(entity, deltaX, 0, deltaX > 0 ? "right" : "left");
+        }
+        if (deltaY != 0) {
+            pushEntityAxis(entity, 0, deltaY, deltaY > 0 ? "down" : "up");
+        }
+    }
+
+    private void pushEntityAxis(Entity entity, int deltaX, int deltaY, String pushDirection) {
+        int remaining = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+        int xSign = Integer.compare(deltaX, 0);
+        int ySign = Integer.compare(deltaY, 0);
+
+        String oldDirection = entity.direction;
+        int oldSpeed = entity.speed;
+        boolean oldCollisionOn = entity.collisionOn;
+
+        while (remaining > 0) {
+            int step = Math.min(KNOCKBACK_STEP_PIXELS, remaining);
+            int stepX = xSign * step;
+            int stepY = ySign * step;
+
+            if (!canPushEntity(entity, pushDirection, step, stepX, stepY)) {
+                break;
+            }
+
+            entity.worldX += stepX;
+            entity.worldY += stepY;
+            remaining -= step;
+        }
+
+        entity.direction = oldDirection;
+        entity.speed = oldSpeed;
+        entity.collisionOn = oldCollisionOn;
+    }
+
+    private boolean canPushEntity(Entity entity, String pushDirection, int step, int stepX, int stepY) {
+        if (!isInsideWorldAfterStep(entity, stepX, stepY)) {
+            return false;
+        }
+
+        String oldDirection = entity.direction;
+        int oldSpeed = entity.speed;
+        boolean oldCollisionOn = entity.collisionOn;
+
+        // ATTACK KNOCKBACK: reuse tile collision by temporarily testing the push step as movement.
+        entity.direction = pushDirection;
+        entity.speed = step;
+        entity.collisionOn = false;
+        gp.cChecker.checkTile(entity);
+        boolean canMove = !entity.collisionOn;
+
+        entity.direction = oldDirection;
+        entity.speed = oldSpeed;
+        entity.collisionOn = oldCollisionOn;
+        return canMove;
+    }
+
+    private boolean isInsideWorldAfterStep(Entity entity, int stepX, int stepY) {
+        int left = entity.worldX + stepX + entity.solidAreaDefaultX;
+        int right = left + entity.solidArea.width;
+        int top = entity.worldY + stepY + entity.solidAreaDefaultY;
+        int bottom = top + entity.solidArea.height;
+
+        return left >= 0
+                && top >= 0
+                && right < gp.MAX_WORLD_COL * gp.TILE_SIZE
+                && bottom < gp.MAX_WORLD_ROW * gp.TILE_SIZE;
     }
 
     public void draw(Graphics2D g2) {
@@ -415,13 +838,10 @@ public class Player extends Entity {
         int x = screenX - (drawSize / 3);
         int y = screenY - (drawSize / 2);
 
-        if (invincible) {
-            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
+        // HURT BLINKING: skip only the sprite on alternating 4-frame windows for retro i-frame flicker.
+        if (!invincible || (invincibleCounter / 4) % 2 != 0) {
+            g2.drawImage(image, x, y, drawSize, drawSize, null);
         }
-
-        g2.drawImage(image, x, y, drawSize, drawSize, null);
-
-        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
 
         //DEBUG: SHOWS HIT BOX AND ATTACK BOX
         if (gp.keyH.showCollisionBox) {

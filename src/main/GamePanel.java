@@ -29,15 +29,25 @@ public class GamePanel extends JPanel implements Runnable {
     //FPS
     int FPS = 60;
 
+    //SOUND EFFECT IDS
+    // Named constants keep gameplay calls readable when combat mechanics trigger sounds.
+    public static final int SE_HIT_MONSTER = 1;
+    public static final int SE_BLOCK_DEFLECT = 2;
+    public static final int SE_PLAYER_HURT = 2;
+    public static final int SE_SWING_WEAPON = 3;
+    public static final int SE_GAME_OVER = 5;
+
     //SYSTEM
     Font arial_40 = new Font("Arial", Font.PLAIN, 40);
     TileManager tileM = new TileManager(this);
     public KeyHandler keyH = new KeyHandler(this);
+    public MouseHandler mouseH = new MouseHandler(this);
     Sound sound = new Sound();
     public CollisionChecker cChecker = new CollisionChecker(this);
     public AssetSetter assetSetter = new AssetSetter(this);
     public UI ui = new UI(this);
     public EventHandler eventHandler = new EventHandler(this);
+    public CombatEffectManager effects = new CombatEffectManager(this);
     volatile Thread gameThread;
     Thread enemyLogicThread;
     Thread playtimeMonitorThread;
@@ -51,6 +61,7 @@ public class GamePanel extends JPanel implements Runnable {
     public final Object monsterLock = new Object();
     ArrayList<Entity> entityArrayList = new ArrayList<>();
     public int playTimeSeconds = 0;
+    public int monstersDefeated = 0;
 
     //GAME STATE
     public volatile int gameState;
@@ -59,6 +70,9 @@ public class GamePanel extends JPanel implements Runnable {
     public final int pauseState = 2;
     public final int dialogueState = 3;
     public final int gameOverState = 4;
+    public final int settingsState = 5;
+    public int musicVolume = UI.SLIDER_TICK_COUNT;
+    public int soundEffectVolume = UI.SLIDER_TICK_COUNT;
     private long gameOverStartTime;
     private boolean gameOverSoundPlayed = false;
 
@@ -68,6 +82,8 @@ public class GamePanel extends JPanel implements Runnable {
         this.setBackground(Color.black);
         this.setDoubleBuffered(true);
         this.addKeyListener(keyH);
+        this.addMouseListener(mouseH);
+        this.addMouseMotionListener(mouseH);
         this.setFocusable(true);
     }
 
@@ -76,6 +92,9 @@ public class GamePanel extends JPanel implements Runnable {
         assetSetter.setObject();
         assetSetter.setNPC();
         assetSetter.setMonster();
+        sound.setMusicVolume(musicVolume);
+        sound.setSoundEffectVolume(soundEffectVolume);
+        monstersDefeated = 0;
         gameState = titleState;
     }
 
@@ -123,8 +142,13 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void update() {
+        effects.update();
 
         if (gameState == playState) {
+            if (effects.isHitPaused()) {
+                return;
+            }
+
             //PLAYER
             player.update();
 
@@ -143,6 +167,9 @@ public class GamePanel extends JPanel implements Runnable {
         if (gameState == pauseState) {
             //nothing atm
         }
+        if (gameState == dialogueState) {
+            ui.updateDialogueTypewriter();
+        }
     }
 
     public void triggerGameOver(){
@@ -152,10 +179,54 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (!gameOverSoundPlayed){
                 stopMusic();
-                playSE(5);
+                playSE(SE_GAME_OVER);
                 gameOverSoundPlayed = true;
             }
         }
+    }
+
+    public void selectTitleCommand(int command) {
+        ui.commandNum = command;
+
+        if (command == UI.TITLE_PLAY) {
+            startNewGame();
+        } else if (command == UI.TITLE_SETTINGS) {
+            gameState = settingsState;
+        } else if (command == UI.TITLE_QUIT) {
+            System.exit(0);
+        }
+    }
+
+    public void startNewGame() {
+        keyH.resetMovementKeys();
+        gameOverSoundPlayed = false;
+        gameState = playState;
+        playMusic(0);
+    }
+
+    public void returnToTitleScreen() {
+        keyH.resetMovementKeys();
+        ui.hoverCommandNum = -1;
+        ui.hoverSettingsCommandNum = -1;
+        gameState = titleState;
+    }
+
+    public void changeMusicVolume(int amount) {
+        setMusicVolume(musicVolume + amount);
+    }
+
+    public void changeSoundEffectVolume(int amount) {
+        setSoundEffectVolume(soundEffectVolume + amount);
+    }
+
+    public void setMusicVolume(int value) {
+        musicVolume = Math.max(0, Math.min(UI.SLIDER_TICK_COUNT, value));
+        sound.setMusicVolume(musicVolume);
+    }
+
+    public void setSoundEffectVolume(int value) {
+        soundEffectVolume = Math.max(0, Math.min(UI.SLIDER_TICK_COUNT, value));
+        sound.setSoundEffectVolume(soundEffectVolume);
     }
 
     //After 3 seconds of death, Show prompt to return to title
@@ -167,6 +238,7 @@ public class GamePanel extends JPanel implements Runnable {
         stopMusic();
         keyH.resetMovementKeys();
         player.setDefaultValues();
+        monstersDefeated = 0;
         synchronized (monsterLock){
             Arrays.fill(monster, null);
         }
@@ -203,14 +275,18 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
 
-        //TITLE SCREEN
-        if (gameState == titleState) {
+        //TITLE / SETTINGS SCREENS
+        if (gameState == titleState || gameState == settingsState) {
             ui.draw(g2);
         }
         //OTHERS
         else {
 
             //TILE
+            int shakeX = effects.getShakeOffsetX();
+            int shakeY = effects.getShakeOffsetY();
+            g2.translate(shakeX, shakeY);
+
             tileM.draw(g2);
 
             //ADD all ENTITIES TO LIST
@@ -246,8 +322,12 @@ public class GamePanel extends JPanel implements Runnable {
                 entity.draw(g2);
             }
 
+            effects.draw(g2);
+
             //Empty the list
             entityArrayList.clear();
+
+            g2.translate(-shakeX, -shakeY);
 
             //UI
             ui.draw(g2);
@@ -289,7 +369,7 @@ public class GamePanel extends JPanel implements Runnable {
             long sleepTime = 1000 / FPS;
 
             while (workerThreadsRunning) {
-                if (gameState == playState) {
+                if (gameState == playState && !effects.isHitPaused()) {
                     updateMonsters();
                 }
 

@@ -13,6 +13,7 @@ public class Npc_Wizard extends Entity{
     public Npc_Wizard(GamePanel gp) {
         super(gp);
 
+        name = "Wizard";
         direction = "down";
 
         solidArea.x = 8;
@@ -53,7 +54,7 @@ public class Npc_Wizard extends Entity{
             dialogueIndex = 0;
             gp.gameState = gp.playState;
         } else {
-            gp.ui.currentDialogue = dialogues[dialogueIndex];
+            gp.ui.setDialogue(dialogues[dialogueIndex]);
             dialogueIndex++;
         }
     }
